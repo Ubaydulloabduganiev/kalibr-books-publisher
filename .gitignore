@@ -1,0 +1,62 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.venv/
+dist/
+build/
+*.egg-info/
+
+# Node
+node_modules/
+.next/
+coverage/
+*.tsbuildinfo
+
+# Runtime data
+storage/*
+!storage/.gitkeep
+backups/*
+!backups/.gitkeep
+tmp/*
+!tmp/.gitkeep
+logs/*
+!logs/.gitkeep
+
+# Editors and operating systems
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Deployment helpers (local only)
+run_kalibr.py
+stop_kalibr.py
+start_kalibr.bat
+stop_kalibr.bat
+.deploy_meta.json
+api.log
+web.log
+.kalibr_pids
+
+# Original mirror lock backup (local only)
+*.orig-mirror-backup
+# local test logs
+apilive*.log
+
+# App-local runtime storage (uploaded media + posts db)
+apps/api/storage/
+**/storage/media/
+
+# Local dev logs
+api_local.log
+web_local.log

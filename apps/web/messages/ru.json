@@ -1,0 +1,103 @@
+{
+  "brand": {
+    "name": "Kalibr Publisher",
+    "subtitle": "Внутренняя издательская платформа"
+  },
+  "nav": {
+    "dashboard": "Панель управления",
+    "system": "Состояние системы",
+    "publisher": "Telegram"
+  },
+  "common": {
+    "online": "Работает",
+    "offline": "Нет соединения",
+    "healthy": "Исправно",
+    "degraded": "Есть проблема",
+    "open": "Открыть",
+    "theme": "Сменить тему",
+    "language": "Язык",
+    "menu": "Меню"
+  },
+  "dashboard": {
+    "eyebrow": "Phase 1",
+    "title": "Инфраструктура Kalibr Publisher готова",
+    "description": "Работают основы backend, frontend, Docker, локализации, безопасности и наблюдаемости.",
+    "api": "Состояние API",
+    "storage": "Постоянные каталоги",
+    "timezone": "Часовой пояс",
+    "version": "Версия",
+    "foundation": "Готовая основа",
+    "foundationDescription": "Это не тестовая статистика: здесь показаны реально работающие компоненты Phase 1.",
+    "items": {
+      "tracing": "Request ID и структурированные логи",
+      "security": "Защитные заголовки и проверка host",
+      "health": "Проверки liveness и readiness",
+      "i18n": "Интерфейс на узбекском и русском",
+      "docker": "Docker для разработки и production",
+      "ci": "CI: lint, type-check, tests и build"
+    }
+  },
+  "system": {
+    "title": "Состояние системы",
+    "description": "Текущее состояние FastAPI и каталогов постоянного хранения.",
+    "service": "Сервис",
+    "environment": "Среда",
+    "checkedAt": "Время проверки",
+    "directory": "Каталог",
+    "freeSpace": "Свободно",
+    "details": "Технические данные",
+    "unavailable": "Не удалось подключиться к API.",
+    "recovery": "Проверьте контейнер API и журналы его health-check."
+  },
+  "publisher": {
+    "title": "Публикация в Telegram",
+    "description": "Отправьте сообщение в канал @kalibr_books.",
+    "channel": "Канал",
+    "defaultChannel": "Канал по умолчанию (@kalibr_books)",
+    "customChannel": "Другой канал",
+    "message": "Текст сообщения",
+    "messagePlaceholder": "Напишите сообщение здесь...",
+    "parseMode": "Форматирование",
+    "send": "Отправить",
+    "sending": "Отправка...",
+    "success": "Сообщение отправлено в Telegram.",
+    "error": "Произошла ошибка",
+    "notConfigured": "Telegram не настроен на сервере."
+  },
+  "scheduler": {
+    "title": "Массовая публикация и планирование",
+    "description": "Загрузите несколько постов (с фото/видео), ИИ перепишет и отправит в канал @kalibr_books в указанное время.",
+    "messagePlaceholder": "Введите текст поста...",
+    "addMedia": "Добавить фото/видео",
+    "uploading": "Загрузка...",
+    "uploadError": "Не удалось загрузить файл",
+    "defaultChannel": "Стандартный канал (@kalibr_books)",
+    "customChannel": "Другой канал",
+    "channel": "Канал",
+    "once": "Один раз",
+    "recurring": "Повторяющийся",
+    "everyHours": "Каждые N часов",
+    "addPost": "Добавить пост",
+    "scheduleAll": "Запланировать",
+    "saving": "Сохранение...",
+    "success": "Посты запланированы",
+    "error": "Произошла ошибка",
+    "queue": "Очередь постов",
+    "queueEmpty": "Пока нет постов",
+    "sendNow": "Отправить сейчас"
+  },
+  "automation": {
+    "title": "Автоматизация контент-плана",
+    "description": "Загрузите контент-план (.txt / .docx / .pdf) — система сгенерирует картинку и текст для каждой темы и запланирует в канал @kalibr_books.",
+    "upload": "Загрузить файл",
+    "orText": "или введите текст",
+    "language": "Язык",
+    "stagger": "Интервал между постами (часов)",
+    "generate": "Сгенерировать и запланировать",
+    "generating": "Генерация...",
+    "success": "Посты созданы и запланированы.",
+    "error": "Произошла ошибка",
+    "created": "Создано",
+    "scheduledFor": "Запланировано на"
+  }
+}

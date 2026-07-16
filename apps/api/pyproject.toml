@@ -1,0 +1,89 @@
+[build-system]
+requires = ["hatchling==1.27.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "kalibr-publisher-api"
+version = "0.1.0"
+description = "Kalibr Publisher backend API"
+readme = "README.md"
+requires-python = ">=3.12,<3.15"
+license = { text = "Proprietary" }
+authors = [{ name = "Kalibr Books" }]
+dependencies = [
+  "fastapi==0.139.0",
+  "pydantic-settings==2.14.2",
+  "structlog==26.1.0",
+  "uvicorn[standard]==0.51.0",
+  "python-multipart>=0.0.20",
+  "httpx>=0.28.0",
+  "python-docx>=1.1.0",
+  "pypdf>=4.0.0",
+]
+
+[dependency-groups]
+dev = [
+  "httpx==0.28.1",
+  "mypy==2.3.0",
+  "pytest==9.1.1",
+  "pytest-asyncio==1.4.0",
+  "pytest-cov==7.1.0",
+  "ruff==0.15.21",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/kalibr_publisher"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+  "E",
+  "F",
+  "I",
+  "UP",
+  "B",
+  "ASYNC",
+  "C4",
+  "DTZ",
+  "G",
+  "PIE",
+  "PT",
+  "RUF",
+  "SIM",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["S101"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unreachable = true
+show_error_codes = true
+pretty = true
+mypy_path = "src"
+
+[tool.pytest.ini_options]
+addopts = "--strict-config --strict-markers --cov=kalibr_publisher --cov-report=term-missing --cov-fail-under=90"
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
+[tool.coverage.run]
+branch = true
+source = ["kalibr_publisher"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+exclude_also = [
+  "if TYPE_CHECKING:",
+  "if __name__ == .__main__.:",
+]

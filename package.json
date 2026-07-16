@@ -1,0 +1,27 @@
+{
+  "name": "kalibr-publisher",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/web"
+  ],
+  "engines": {
+    "node": ">=22.0.0",
+    "npm": ">=10.0.0"
+  },
+  "scripts": {
+    "web:dev": "npm run dev --workspace @kalibr-publisher/web",
+    "web:build": "npm run build --workspace @kalibr-publisher/web",
+    "web:start": "npm run start --workspace @kalibr-publisher/web",
+    "web:lint": "npm run lint --workspace @kalibr-publisher/web",
+    "web:typecheck": "npm run typecheck --workspace @kalibr-publisher/web",
+    "web:test": "npm run test --workspace @kalibr-publisher/web",
+    "check": "npm run web:lint && npm run web:typecheck && npm run web:test"
+  },
+  "overrides": {
+    "postcss": "8.5.19"
+  },
+  "dependencies": {
+    "baseline-browser-mapping": "^2.9.19"
+  }
+}

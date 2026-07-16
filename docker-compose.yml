@@ -1,0 +1,64 @@
+name: kalibr-publisher
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: development
+    env_file:
+      - .env
+    environment:
+      STORAGE_ROOT: /data/storage
+      BACKUP_ROOT: /data/backups
+      TEMP_ROOT: /data/tmp
+      LOG_ROOT: /data/logs
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./apps/api:/app
+      - api-venv:/app/.venv
+      - ./storage:/data/storage
+      - ./backups:/data/backups
+      - ./tmp:/data/tmp
+      - ./logs:/data/logs
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health/ready', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    init: true
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      target: development
+    env_file:
+      - .env
+    environment:
+      API_INTERNAL_URL: http://api:8000
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./apps/web:/app/apps/web
+      - ./package.json:/app/package.json:ro
+      - ./package-lock.json:/app/package-lock.json:ro
+      - web-node-modules:/app/node_modules
+      - web-next-cache:/app/apps/web/.next
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r => { if (!r.ok) process.exit(1) }).catch(() => process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    init: true
+
+volumes:
+  api-venv:
+  web-node-modules:
+  web-next-cache:

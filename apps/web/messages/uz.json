@@ -1,0 +1,103 @@
+{
+  "brand": {
+    "name": "Kalibr Publisher",
+    "subtitle": "Ichki nashriyot platformasi"
+  },
+  "nav": {
+    "dashboard": "Boshqaruv paneli",
+    "system": "Tizim holati",
+    "publisher": "Telegram"
+  },
+  "common": {
+    "online": "Ishlamoqda",
+    "offline": "Ulanmagan",
+    "healthy": "Sog‘lom",
+    "degraded": "Muammo bor",
+    "open": "Ochish",
+    "theme": "Mavzuni almashtirish",
+    "language": "Til",
+    "menu": "Menyu"
+  },
+  "dashboard": {
+    "eyebrow": "Phase 1",
+    "title": "Kalibr Publisher infratuzilmasi tayyor",
+    "description": "Backend, frontend, Docker, lokalizatsiya, xavfsizlik va kuzatuv asoslari ishlamoqda.",
+    "api": "API holati",
+    "storage": "Doimiy kataloglar",
+    "timezone": "Vaqt zonasi",
+    "version": "Versiya",
+    "foundation": "Tayyorlangan asoslar",
+    "foundationDescription": "Bu ko‘rsatkichlar soxta statistika emas; ular Phase 1 da real ishlayotgan komponentlarni ko‘rsatadi.",
+    "items": {
+      "tracing": "Request ID va strukturali loglar",
+      "security": "Xavfsizlik sarlavhalari va host tekshiruvi",
+      "health": "Liveness va readiness tekshiruvlari",
+      "i18n": "O‘zbek va rus interfeysi",
+      "docker": "Development va production Docker muhiti",
+      "ci": "Lint, type-check, test va build CI"
+    }
+  },
+  "system": {
+    "title": "Tizim holati",
+    "description": "FastAPI va doimiy saqlash kataloglarining real vaqtdagi holati.",
+    "service": "Xizmat",
+    "environment": "Muhit",
+    "checkedAt": "Tekshirilgan vaqt",
+    "directory": "Katalog",
+    "freeSpace": "Bo‘sh joy",
+    "details": "Texnik ma’lumot",
+    "unavailable": "API bilan aloqa o‘rnatilmadi.",
+    "recovery": "API konteyneri va uning health-check loglarini tekshiring."
+  },
+  "publisher": {
+    "title": "Telegram'ga joylash",
+    "description": "Xabarni @kalibr_books kanaliga yuboring.",
+    "channel": "Kanal",
+    "defaultChannel": "Standart kanal (@kalibr_books)",
+    "customChannel": "Boshqa kanal",
+    "message": "Xabar matni",
+    "messagePlaceholder": "Bu yerga xabar yozing...",
+    "parseMode": "Formatlash",
+    "send": "Yuborish",
+    "sending": "Yuborilmoqda...",
+    "success": "Xabar Telegram'ga yuborildi.",
+    "error": "Xatolik yuz berdi",
+    "notConfigured": "Telegram serverda sozlanmagan."
+  },
+  "scheduler": {
+    "title": "Partiyali joylash va rejalashtirish",
+    "description": "Bir nechta postni (rasmlar/video bilan) yuklang, AI qayta yozadi va belgilangan vaqtda @kalibr_books kanaliga yuboradi.",
+    "messagePlaceholder": "Post matnini kiriting...",
+    "addMedia": "Rasm/Video qo'shish",
+    "uploading": "Yuklanmoqda...",
+    "uploadError": "Fayl yuklanmadi",
+    "defaultChannel": "Standart kanal (@kalibr_books)",
+    "customChannel": "Boshqa kanal",
+    "channel": "Kanal",
+    "once": "Bir martalik",
+    "recurring": "Takrorlanuvchi",
+    "everyHours": "Har necha soatda",
+    "addPost": "Post qo'shish",
+    "scheduleAll": "Rejalashtirish",
+    "saving": "Saqlanmoqda...",
+    "success": "Postlar rejalashtirildi",
+    "error": "Xatolik yuz berdi",
+    "queue": "Navbatdagi postlar",
+    "queueEmpty": "Hozircha postlar yo'q",
+    "sendNow": "Hozir yuborish"
+  },
+  "automation": {
+    "title": "Kontent-reja avtomatizatsiyasi",
+    "description": "Kontent-rejani yuklang (.txt / .docx / .pdf) — tizim har bir mavzu uchun rasm va matn generatsiya qilib, @kalibr_books kanaliga rejalashtiradi.",
+    "upload": "Fayl yuklash",
+    "orText": "yoki matnni kiriting",
+    "language": "Til",
+    "stagger": "Postlar orasidagi masofa (soat)",
+    "generate": "Generatsiya qilish va rejalashtirish",
+    "generating": "Generatsiya qilinmoqda...",
+    "success": "Postlar yaratildi va rejalashtirildi.",
+    "error": "Xatolik yuz berdi",
+    "created": "Yaratildi",
+    "scheduledFor": "Rejalashtirilgan vaqt"
+  }
+}
