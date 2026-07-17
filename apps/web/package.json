@@ -1,6 +1,6 @@
 {
   "name": "@kalibr-publisher/web",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "engines": {
     "node": ">=22.0.0"
@@ -12,7 +12,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "postbuild": "node copy-standalone.js"
+    "postbuild": "node copy-standalone.mjs"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "1.1.19",

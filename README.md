@@ -1,73 +1,73 @@
 # Kalibr Publisher
 
-Kalibr Publisher is Kalibr Books' private internal platform for organizing, scheduling, and publishing manually created content to Telegram. The application does not generate content and has no dependency on AI or paid APIs.
+Kalibr Publisher is Kalibr Books' private internal platform for organizing, scheduling, and publishing **manually prepared** content to Telegram. It does not generate captions, images, or content and has no AI API dependency.
 
-This repository currently contains **Phase 1: production-grade project foundations**.
+This archive is version **0.1.1**, a repaired deployment-ready foundation for the current two-service Render setup and the planned Ubuntu VPS deployment.
 
-## Included in Phase 1
+## What works now
 
-- FastAPI service with typed settings, structured logging, request tracing, consistent API errors, security headers, liveness checks, and real filesystem readiness checks.
-- Next.js App Router interface with Uzbek and Russian localization, responsive navigation, dark mode, and live backend status.
-- Docker development and production builds.
-- Caddy reverse proxy with automatic HTTPS for `publisher.uboom.uz`.
-- Persistent host-mounted directories for storage, backups, temporary files, and logs.
-- Python and TypeScript linting, strict type checking, automated tests, and GitHub Actions CI.
-- Architecture, installation, API, environment, folder-structure, deployment, verification, and Phase 1 decision documentation.
+- FastAPI API with structured logging, request tracing, stable error envelopes, security headers, liveness/readiness checks, and a useful root endpoint.
+- Next.js administration UI in Uzbek and Russian, responsive navigation, dark mode, backend status, direct Telegram text publishing, media uploads, and basic scheduling.
+- Supported media: JPEG, PNG, WebP, GIF, MP4, MOV, WebM, PDF, DOC, and DOCX.
+- Telegram text, photo, video, animation, document, and mixed photo/video album delivery.
+- Persistent local media storage and an atomic JSON post store for the current single-process phase.
+- A single-process scheduler that resumes pending JSON-backed schedules after restart.
+- A protected browser gateway: temporary Basic Auth at Next.js and a separate shared secret between Next.js and FastAPI.
+- Docker development and production builds, Caddy HTTPS configuration, Render Blueprint, and GitHub Actions CI.
 
-## Requirements
+## Important current limitation
 
-- Docker Engine 26+ with Docker Compose v2, or
-- Python 3.12, uv 0.11.28+, Node.js 22, and npm 10 for local non-Docker development.
+The post store is an **atomic JSON file**, not the final SQLAlchemy/Alembic database. Therefore:
 
-## Start with Docker
+- Run exactly **one API worker**.
+- Do not horizontally scale the API service.
+- Treat this version as a corrected operational foundation, not the completed company-wide platform.
+- Database-backed idempotency, durable retry history, JWT sessions, audit logs, approvals, and the full media library remain later phases.
+
+## Local Docker start
 
 ```bash
 cp .env.example .env
+# Change ADMIN_BASIC_PASSWORD and INTERNAL_API_KEY.
 docker compose up --build
 ```
 
 Open:
 
 - Web: `http://localhost:3000`
+- API root: `http://localhost:8000/`
 - API documentation: `http://localhost:8000/docs`
 - API readiness: `http://localhost:8000/api/v1/health/ready`
 
-## Run quality checks
+## Quality checks
 
 ```bash
 make bootstrap
 make check
+npm run web:build
 ```
 
-## Production
+## Deployment
 
-Start with the [`installation guide`](docs/installation.md), then use the [`deployment guide`](docs/deployment.md) for production. Phase 1 endpoints are documented in [`docs/api.md`](docs/api.md), and verification results are recorded in [`docs/verification.md`](docs/verification.md). The intended public address is `https://publisher.uboom.uz`.
+- Render: see [`docs/deployment.md`](docs/deployment.md#render-blueprint-deployment).
+- Ubuntu VPS: see [`docs/deployment.md`](docs/deployment.md#ubuntu-vps-deployment).
+- Environment variables: [`docs/environment-variables.md`](docs/environment-variables.md).
+- API endpoints: [`docs/api.md`](docs/api.md).
+- Repair report: [`docs/code-review-phase-1.md`](docs/code-review-phase-1.md).
 
-## Project layout
+## Repository layout
 
 ```text
-apps/api/                 FastAPI application
-apps/web/                 Next.js application
-infrastructure/caddy/     HTTPS reverse-proxy configuration
+apps/api/                 FastAPI API and tests
+apps/web/                 Next.js UI and tests
+infrastructure/caddy/     HTTPS reverse proxy for VPS deployment
 docs/                     Architecture and operating documentation
-storage/                  Persistent uploaded content at runtime
-backups/                  Persistent backup archives at runtime
+render.yaml               Render Blueprint
+storage/                  Runtime data in a non-container deployment
+backups/                  Backup location
+logs/                     Optional file logs
 tmp/                      Controlled temporary workspace
-logs/                     Application logs when file output is enabled
 ```
-
-## Development phases
-
-1. Project architecture — implemented in this archive.
-2. Database and migrations.
-3. Authentication and session management.
-4. Media library.
-5. Content management.
-6. Durable scheduler.
-7. Telegram publishing.
-8. Dashboard and calendar.
-9. Full test expansion and hardening.
-10. Production deployment and operations.
 
 ## Ownership
 

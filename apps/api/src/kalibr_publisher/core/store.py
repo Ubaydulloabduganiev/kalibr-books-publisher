@@ -1,269 +1,274 @@
-"""DB-free JSON file store for scheduled posts.
+"""Atomic JSON post store used until the SQLAlchemy phase is introduced.
 
-Posts are persisted to ``storage/posts.json``. Each post record:
-
-    {
-        "id": "uuid4",
-        "text": "caption text",
-        "media": [{"kind": "photo|video", "path": "storage/media/xxx.jpg"}],
-        "target": "@inglizguru" | null,
-        "parse_mode": "HTML" | null,
-        "schedule": {
-            "mode": "once" | "recurring",
-            "run_at": "ISO8601" (once) | null,
-            "every_hours": 24 (recurring) | null,
-            "next_run": "ISO8601" (computed),
-            "end_at": "ISO8601" | null,
-        },
-        "ai": {"rewrite": true, "language": "uz", "choose_order": true, "choose_time": false},
-        "status": "pending" | "sent" | "failed" | "paused",
-        "created_at": "ISO8601",
-        "sent_at": "ISO8601" | null,
-        "last_error": str | null,
-        "send_count": int,
-    }
+The store is intentionally single-process. Production must run exactly one API worker
+until scheduled posts are migrated to a transactional database-backed queue.
 """
 
 from __future__ import annotations
 
 import json
+import os
 import threading
 import uuid
-from dataclasses import asdict, dataclass, field
-from datetime import datetime, timedelta, timezone
+from dataclasses import asdict, dataclass, field, fields
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from kalibr_publisher.core.config import get_settings
 
 _lock = threading.RLock()
-_STORE_PATH: Optional[Path] = None
+_STORE_PATH: Path | None = None
+
+
+def configure_store(path: Path | None) -> None:
+    """Set the process-wide store path before serving requests."""
+    global _STORE_PATH
+    with _lock:
+        _STORE_PATH = path
 
 
 def _store_path() -> Path:
-    global _STORE_PATH
-    if _STORE_PATH is None:
-        settings = get_settings()
-        root = Path(getattr(settings, "storage_root", "storage"))
-        _STORE_PATH = root / "posts.json"
-        _STORE_PATH.parent.mkdir(parents=True, exist_ok=True)
-        if not _STORE_PATH.exists():
-            _STORE_PATH.write_text("[]", encoding="utf-8")
-    return _STORE_PATH
+    path = _STORE_PATH or (get_settings().storage_root / "posts.json")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if not path.exists():
+        _atomic_write(path, "[]")
+    return path
 
 
-@dataclass
+def _atomic_write(path: Path, content: str) -> None:
+    temporary = path.with_name(f".{path.name}.{uuid.uuid4().hex}.tmp")
+    try:
+        with temporary.open("w", encoding="utf-8") as handle:
+            handle.write(content)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, path)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
+@dataclass(slots=True)
 class MediaRef:
-    kind: str  # "photo" | "video"
-    path: str  # relative to media_root, e.g. "storage/media/uuid.jpg"
+    kind: str
+    path: str
 
 
-@dataclass
+@dataclass(slots=True)
 class Schedule:
-    mode: str = "once"  # "once" | "recurring"
-    run_at: Optional[str] = None  # ISO8601 for once
-    every_hours: Optional[int] = None  # for recurring
-    next_run: Optional[str] = None
-    end_at: Optional[str] = None
+    mode: str = "once"
+    run_at: str | None = None
+    every_hours: int | None = None
+    next_run: str | None = None
+    end_at: str | None = None
 
 
-@dataclass
-class AiConfig:
-    rewrite: bool = True
-    language: str = "uz"
-    choose_order: bool = True
-    choose_time: bool = False
+@dataclass(slots=True)
+class PostDraft:
+    text: str
+    media: list[MediaRef] = field(default_factory=list)
+    target: str | None = None
+    parse_mode: str | None = None
+    schedule: Schedule = field(default_factory=Schedule)
 
 
-@dataclass
+@dataclass(slots=True)
 class Post:
     id: str = field(default_factory=lambda: uuid.uuid4().hex)
     text: str = ""
     media: list[MediaRef] = field(default_factory=list)
-    target: Optional[str] = None
-    parse_mode: Optional[str] = "HTML"
+    target: str | None = None
+    parse_mode: str | None = None
     schedule: Schedule = field(default_factory=Schedule)
-    ai: AiConfig = field(default_factory=AiConfig)
     status: str = "pending"
-    created_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
-    sent_at: Optional[str] = None
-    last_error: Optional[str] = None
+    created_at: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
+    sent_at: str | None = None
+    last_error: str | None = None
     send_count: int = 0
 
     def to_dict(self) -> dict[str, Any]:
-        d = asdict(self)
-        return d
-
-    def to_out(self) -> dict[str, Any]:
-        """Dict shaped for the PostOut API schema."""
-        return {
-            "id": self.id,
-            "text": self.text,
-            "media": [{"kind": m.kind, "path": m.path} for m in self.media],
-            "target": self.target,
-            "parse_mode": self.parse_mode,
-            "schedule": {
-                "mode": self.schedule.mode,
-                "run_at": self.schedule.run_at,
-                "every_hours": self.schedule.every_hours,
-                "end_at": self.schedule.end_at,
-            },
-            "ai": {
-                "rewrite": self.ai.rewrite,
-                "language": self.ai.language,
-                "choose_order": self.ai.choose_order,
-                "choose_time": self.ai.choose_time,
-            },
-            "status": self.status,
-            "created_at": self.created_at,
-            "sent_at": self.sent_at,
-            "last_error": self.last_error,
-            "send_count": self.send_count,
-        }
+        return asdict(self)
 
     @classmethod
-    def from_dict(cls, d: dict[str, Any]) -> "Post":
-        d = dict(d)
-        d["media"] = [MediaRef(**m) for m in d.get("media", [])]
-        d["schedule"] = Schedule(**(d.get("schedule") or {}))
-        d["ai"] = AiConfig(**(d.get("ai") or {}))
-        return cls(**d)
+    def from_dict(cls, raw: dict[str, Any]) -> Post:
+        data = dict(raw)
+        allowed = {item.name for item in fields(cls)}
+        data = {key: value for key, value in data.items() if key in allowed}
+        data["media"] = [MediaRef(**item) for item in data.get("media", [])]
+        data["schedule"] = Schedule(**(data.get("schedule") or {}))
+        return cls(**data)
 
 
-def _load() -> list[Post]:
+def _load_unlocked() -> list[Post]:
+    path = _store_path()
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8") or "[]")
+    except json.JSONDecodeError as exc:
+        raise RuntimeError(f"Post store is corrupted: {path}") from exc
+    if not isinstance(raw, list):
+        raise RuntimeError(f"Post store must contain a JSON array: {path}")
+    return [Post.from_dict(item) for item in raw]
+
+
+def _save_unlocked(posts: list[Post]) -> None:
+    data = json.dumps([post.to_dict() for post in posts], ensure_ascii=False, indent=2)
+    _atomic_write(_store_path(), data)
+
+
+def list_posts(status: str | None = None) -> list[Post]:
     with _lock:
-        raw = _store_path().read_text(encoding="utf-8") or "[]"
-        return [Post.from_dict(x) for x in json.loads(raw)]
-
-
-def _save(posts: list[Post]) -> None:
-    with _lock:
-        data = json.dumps([p.to_dict() for p in posts], ensure_ascii=False, indent=2)
-        _store_path().write_text(data, encoding="utf-8")
-
-
-def list_posts(status: Optional[str] = None) -> list[Post]:
-    posts = _load()
+        posts = _load_unlocked()
     if status:
-        posts = [p for p in posts if p.status == status]
-    return sorted(posts, key=lambda p: p.created_at)
+        posts = [post for post in posts if post.status == status]
+    return sorted(posts, key=lambda post: (post.schedule.next_run or "", post.created_at, post.id))
 
 
-def get_post(post_id: str) -> Optional[Post]:
-    for p in _load():
-        if p.id == post_id:
-            return p
-    return None
+def get_post(post_id: str) -> Post | None:
+    with _lock:
+        return next((post for post in _load_unlocked() if post.id == post_id), None)
+
+
+def create_posts(drafts: list[PostDraft]) -> list[Post]:
+    """Create multiple posts with one store read and one atomic write."""
+    if not drafts:
+        return []
+    created = [
+        Post(
+            text=draft.text,
+            media=list(draft.media),
+            target=draft.target,
+            parse_mode=draft.parse_mode,
+            schedule=draft.schedule,
+        )
+        for draft in drafts
+    ]
+    for post in created:
+        _compute_next_run(post)
+    with _lock:
+        posts = _load_unlocked()
+        posts.extend(created)
+        _save_unlocked(posts)
+    return created
 
 
 def create_post(
     text: str,
-    media: Optional[list[MediaRef]] = None,
-    target: Optional[str] = None,
-    parse_mode: Optional[str] = "HTML",
-    schedule: Optional[Schedule] = None,
-    ai: Optional[AiConfig] = None,
+    media: list[MediaRef] | None = None,
+    target: str | None = None,
+    parse_mode: str | None = None,
+    schedule: Schedule | None = None,
 ) -> Post:
-    post = Post(
-        text=text,
-        media=media or [],
-        target=target,
-        parse_mode=parse_mode,
-        schedule=schedule or Schedule(),
-        ai=ai or AiConfig(),
-    )
-    _compute_next_run(post)
-    with _lock:
-        posts = _load()
-        posts.append(post)
-        _save(posts)
-    return post
+    return create_posts(
+        [
+            PostDraft(
+                text=text,
+                media=media or [],
+                target=target,
+                parse_mode=parse_mode,
+                schedule=schedule or Schedule(),
+            )
+        ]
+    )[0]
 
 
 def update_post(post: Post) -> None:
     _compute_next_run(post)
     with _lock:
-        posts = _load()
-        for i, p in enumerate(posts):
-            if p.id == post.id:
-                posts[i] = post
-                break
-        _save(posts)
+        posts = _load_unlocked()
+        for index, current in enumerate(posts):
+            if current.id == post.id:
+                posts[index] = post
+                _save_unlocked(posts)
+                return
+        raise KeyError(f"Post not found: {post.id}")
+
+
+def claim_post(post_id: str) -> Post | None:
+    """Atomically move a pending post into the publishing state."""
+    with _lock:
+        posts = _load_unlocked()
+        for post in posts:
+            if post.id != post_id or post.status != "pending":
+                continue
+            post.status = "publishing"
+            post.last_error = None
+            _save_unlocked(posts)
+            return post
+    return None
+
+
+def recover_interrupted_publications() -> int:
+    """Mark in-flight posts as uncertain after an unclean process restart."""
+    with _lock:
+        posts = _load_unlocked()
+        recovered = 0
+        for post in posts:
+            if post.status != "publishing":
+                continue
+            post.status = "delivery_uncertain"
+            post.last_error = (
+                "The service restarted while Telegram delivery was in progress. "
+                "Check the channel before retrying."
+            )
+            recovered += 1
+        if recovered:
+            _save_unlocked(posts)
+        return recovered
 
 
 def delete_post(post_id: str) -> bool:
     with _lock:
-        posts = _load()
-        new = [p for p in posts if p.id != post_id]
-        if len(new) == len(posts):
+        posts = _load_unlocked()
+        remaining = [post for post in posts if post.id != post_id]
+        if len(remaining) == len(posts):
             return False
-        _save(new)
+        _save_unlocked(remaining)
         return True
 
 
 def _compute_next_run(post: Post) -> None:
-    """Set schedule.next_run based on mode."""
-    sched = post.schedule
-    now = datetime.now(timezone.utc)
-    if sched.mode == "once":
-        if sched.run_at:
-            parsed = _parse_dt(sched.run_at)
-            sched.next_run = (parsed or now).isoformat()
-        else:
-            sched.next_run = now.isoformat()
-    elif sched.mode == "recurring":
-        if sched.next_run and datetime.fromisoformat(sched.next_run) > now:
-            return  # keep existing future run
-        sched.next_run = now.isoformat()
+    schedule = post.schedule
+    now = datetime.now(UTC)
+    if schedule.mode == "once":
+        schedule.next_run = (_parse_dt(schedule.run_at) or now).isoformat()
+        return
+    if schedule.next_run and (_parse_dt(schedule.next_run) or now) > now:
+        return
+    schedule.next_run = (_parse_dt(schedule.run_at) or now).isoformat()
 
 
-def _parse_dt(value: Optional[str]) -> Optional[datetime]:
-    """Parse an ISO8601 string into an aware (UTC) datetime.
-
-    Naive values (no timezone, e.g. from a datetime-local input) are
-    interpreted as UTC so comparisons against ``datetime.now(timezone.utc)``
-    never raise TypeError.
-    """
+def _parse_dt(value: str | None) -> datetime | None:
     if not value:
         return None
     try:
-        dt = datetime.fromisoformat(value)
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
     except ValueError:
         return None
-    if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
-    else:
-        dt = dt.astimezone(timezone.utc)
-    return dt
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=UTC)
+    return parsed.astimezone(UTC)
 
 
-def due_posts(now: Optional[datetime] = None) -> list[Post]:
-    now = now or datetime.now(timezone.utc)
-    out = []
-    for p in _load():
-        if p.status != "pending":
-            continue
-        nxt = _parse_dt(p.schedule.next_run)
-        if nxt is None:
-            continue
-        if nxt <= now:
-            out.append(p)
-    return out
+def due_posts(now: datetime | None = None) -> list[Post]:
+    threshold = now or datetime.now(UTC)
+    return [
+        post
+        for post in list_posts(status="pending")
+        if (next_run := _parse_dt(post.schedule.next_run)) is not None and next_run <= threshold
+    ]
 
 
 def advance_recurring(post: Post) -> None:
-    """After sending a recurring post, push next_run forward."""
-    sched = post.schedule
-    last = datetime.now(timezone.utc)
+    sent_at = datetime.now(UTC)
     post.send_count += 1
-    post.sent_at = last.isoformat()
-    if sched.mode != "recurring":
+    post.sent_at = sent_at.isoformat()
+    if post.schedule.mode != "recurring":
         post.status = "sent"
         return
-    every = sched.every_hours or 24
-    nxt = last + timedelta(hours=every)
-    end = _parse_dt(sched.end_at)
-    if end and nxt >= end:
+    next_run = sent_at + timedelta(hours=post.schedule.every_hours or 24)
+    end_at = _parse_dt(post.schedule.end_at)
+    if end_at and next_run >= end_at:
         post.status = "sent"
-    else:
-        sched.next_run = nxt.isoformat()
+        return
+    post.status = "pending"
+    post.schedule.next_run = next_run.isoformat()

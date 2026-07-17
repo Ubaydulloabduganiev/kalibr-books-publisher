@@ -9,14 +9,9 @@
 {$APP_DOMAIN} {
   encode zstd gzip
 
-  @api path /api/v1/* /docs* /redoc* /openapi.json
-  handle @api {
-    reverse_proxy api:8000
-  }
-
-  handle {
-    reverse_proxy web:3000
-  }
+  # The Next.js gateway enforces the temporary admin gate and injects the
+  # server-side internal API key before forwarding /api/v1 requests.
+  reverse_proxy web:3000
 
   header {
     -Server

@@ -82,7 +82,7 @@ export default async function SystemPage({ params }: { params: Promise<{ locale:
                   <CardHeader className="flex-row items-start justify-between gap-4">
                     <div>
                       <CardTitle className="capitalize">{name}</CardTitle>
-                      <CardDescription>{String(check.details.path ?? "")}</CardDescription>
+                      <CardDescription>{messages.system.directory}</CardDescription>
                     </div>
                     <Badge tone={check.status === "pass" ? "success" : "danger"}>
                       {check.status === "pass" ? messages.common.healthy : messages.common.degraded}

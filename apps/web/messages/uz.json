@@ -19,15 +19,15 @@
     "menu": "Menyu"
   },
   "dashboard": {
-    "eyebrow": "Phase 1",
-    "title": "Kalibr Publisher infratuzilmasi tayyor",
-    "description": "Backend, frontend, Docker, lokalizatsiya, xavfsizlik va kuzatuv asoslari ishlamoqda.",
+    "eyebrow": "0.1.1",
+    "title": "Kalibr Publisher boshqaruv paneli",
+    "description": "Qo‘lda tayyorlangan kontentni Telegram kanaliga darhol yuboring yoki rejalashtiring.",
     "api": "API holati",
     "storage": "Doimiy kataloglar",
     "timezone": "Vaqt zonasi",
     "version": "Versiya",
-    "foundation": "Tayyorlangan asoslar",
-    "foundationDescription": "Bu ko‘rsatkichlar soxta statistika emas; ular Phase 1 da real ishlayotgan komponentlarni ko‘rsatadi.",
+    "foundation": "Ishlayotgan tizim imkoniyatlari",
+    "foundationDescription": "Quyidagi holatlar API va saqlash tizimidan real vaqtda olinadi.",
     "items": {
       "tracing": "Request ID va strukturali loglar",
       "security": "Xavfsizlik sarlavhalari va host tekshiruvi",
@@ -66,7 +66,7 @@
   },
   "scheduler": {
     "title": "Partiyali joylash va rejalashtirish",
-    "description": "Bir nechta postni (rasmlar/video bilan) yuklang, AI qayta yozadi va belgilangan vaqtda @kalibr_books kanaliga yuboradi.",
+    "description": "Bir nechta qo‘lda tayyorlangan postni rasm yoki video bilan belgilangan vaqtda @kalibr_books kanaliga yuboring.",
     "messagePlaceholder": "Post matnini kiriting...",
     "addMedia": "Rasm/Video qo'shish",
     "uploading": "Yuklanmoqda...",
@@ -84,20 +84,8 @@
     "error": "Xatolik yuz berdi",
     "queue": "Navbatdagi postlar",
     "queueEmpty": "Hozircha postlar yo'q",
-    "sendNow": "Hozir yuborish"
-  },
-  "automation": {
-    "title": "Kontent-reja avtomatizatsiyasi",
-    "description": "Kontent-rejani yuklang (.txt / .docx / .pdf) — tizim har bir mavzu uchun rasm va matn generatsiya qilib, @kalibr_books kanaliga rejalashtiradi.",
-    "upload": "Fayl yuklash",
-    "orText": "yoki matnni kiriting",
-    "language": "Til",
-    "stagger": "Postlar orasidagi masofa (soat)",
-    "generate": "Generatsiya qilish va rejalashtirish",
-    "generating": "Generatsiya qilinmoqda...",
-    "success": "Postlar yaratildi va rejalashtirildi.",
-    "error": "Xatolik yuz berdi",
-    "created": "Yaratildi",
-    "scheduledFor": "Rejalashtirilgan vaqt"
+    "sendNow": "Hozir yuborish",
+    "scheduleRequired": "Bir martalik post uchun sana va vaqtni tanlang.",
+    "uncertainConfirmation": "Telegram kanalini tekshirdingizmi? Qayta yuborish dublikat post yaratishi mumkin."
   }
 }

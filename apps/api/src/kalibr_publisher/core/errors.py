@@ -78,18 +78,33 @@ def _response(
     return JSONResponse(status_code=status_code, content=payload.model_dump(mode="json"))
 
 
+def _json_safe(value: Any) -> Any:
+    if value is None or isinstance(value, (str, int, float, bool)):
+        return value
+    if isinstance(value, dict):
+        return {str(key): _json_safe(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple, set)):
+        return [_json_safe(item) for item in value]
+    return str(value)
+
+
 def register_exception_handlers(app: FastAPI, settings: Settings) -> None:
     """Install handlers without leaking sensitive internals in production."""
 
     @app.exception_handler(ApiError)
     async def handle_api_error(_: Request, exc: ApiError) -> JSONResponse:
-        logger.warning("api_error", code=exc.code, status_code=exc.status_code)
+        logger.warning(
+            "api_error",
+            code=exc.code,
+            status_code=exc.status_code,
+            technical_details=exc.technical_details,
+        )
         return _response(
             status_code=exc.status_code,
             code=exc.code,
             message=exc.message,
             recovery_suggestion=exc.recovery_suggestion,
-            technical_details=exc.technical_details,
+            technical_details=None if settings.is_production else exc.technical_details,
         )
 
     @app.exception_handler(RequestValidationError)
@@ -102,7 +117,7 @@ def register_exception_handlers(app: FastAPI, settings: Settings) -> None:
             code="validation_error",
             message="The request contains invalid or missing values.",
             recovery_suggestion="Correct the highlighted fields and submit the request again.",
-            technical_details=exc.errors(),
+            technical_details=_json_safe(exc.errors()),
         )
 
     @app.exception_handler(StarletteHTTPException)

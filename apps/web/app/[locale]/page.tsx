@@ -3,7 +3,6 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { StatusCard } from "@/components/status-card";
-import { ContentPlan } from "@/components/content-plan";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getSystemSnapshot } from "@/lib/api";
@@ -56,7 +55,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ loca
         />
         <StatusCard
           label={messages.dashboard.version}
-          value={snapshot.meta?.version ?? "0.1.0"}
+          value={snapshot.meta?.version ?? "0.1.1"}
           icon={ShieldCheck}
         />
       </section>
@@ -78,7 +77,6 @@ export default async function DashboardPage({ params }: { params: Promise<{ loca
         </CardContent>
       </Card>
 
-      <ContentPlan messages={messages} />
     </div>
   );
 }

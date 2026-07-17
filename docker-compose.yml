@@ -9,6 +9,7 @@ services:
     env_file:
       - .env
     environment:
+      PORT: "8000"
       STORAGE_ROOT: /data/storage
       BACKUP_ROOT: /data/backups
       TEMP_ROOT: /data/tmp
@@ -16,12 +17,9 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ./apps/api:/app
-      - api-venv:/app/.venv
-      - ./storage:/data/storage
-      - ./backups:/data/backups
-      - ./tmp:/data/tmp
-      - ./logs:/data/logs
+      - ./apps/api/src:/app/src
+      - ./apps/api/tests:/app/tests
+      - api-data:/data
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health/ready', timeout=3)"]
       interval: 10s
@@ -38,6 +36,7 @@ services:
     env_file:
       - .env
     environment:
+      PORT: "3000"
       API_INTERNAL_URL: http://api:8000
     ports:
       - "3000:3000"
@@ -59,6 +58,6 @@ services:
     init: true
 
 volumes:
-  api-venv:
+  api-data:
   web-node-modules:
   web-next-cache:

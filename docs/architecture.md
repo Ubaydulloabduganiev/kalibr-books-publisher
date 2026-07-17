@@ -1,63 +1,52 @@
 # Architecture
 
-## System shape
+## Current deployment shape
 
-Kalibr Publisher is a modular monolith. The web application and API are separate deployable containers, while business modules remain within one backend codebase and one database boundary. This preserves operational simplicity without coupling future modules together.
+Kalibr Publisher remains a modular monolith. The web and API are separate containers, but business logic is kept in one backend codebase.
 
 ```mermaid
 flowchart LR
-    B[Administrator browser] --> C[Caddy HTTPS reverse proxy]
-    C --> W[Next.js web]
-    C --> A[FastAPI API]
-    W --> A
-    A --> FS[(Persistent local storage)]
-    A --> DB[(SQLite initially)]
-    S[Scheduler worker - Phase 6] --> DB
+    B[Administrator browser] --> P[Next.js gateway]
+    P -->|X-Internal-API-Key| A[FastAPI API]
+    A --> J[(Atomic posts.json)]
+    A --> F[(Persistent media files)]
+    A --> S[Single-process scheduler]
     S --> T[Telegram Bot API]
-    A -. signed optional events .-> N[n8n]
+    C[Caddy on Ubuntu VPS] --> P
+    R[Render public web service] --> P
 ```
 
-The Phase 1 archive implements Caddy, Next.js, FastAPI, persistent runtime paths, health checks, localization, CI, and operational documentation. Database and business modules are intentionally introduced in their designated phases so schema decisions are reviewed before use.
+All browser API calls pass through Next.js. Caddy also routes only to Next.js, preventing callers from bypassing the temporary administrator gate. FastAPI write endpoints separately require an internal service key.
 
-## Architectural boundaries
+## Backend modules
 
-The backend will be organized by business capability rather than technical layer alone:
+- `api/routes/health.py`: liveness, readiness, and metadata.
+- `api/routes/posts.py`: manual post creation, upload, listing, rescheduling, and deletion.
+- `api/routes/telegram.py`: immediate text publishing.
+- `core/config.py`: validated environment settings and secret-safe values.
+- `core/store.py`: atomic single-process JSON persistence.
+- `integrations/telegram.py`: Telegram Bot API transport and media multipart requests.
+- `services/publisher.py`: media resolution, Telegram dispatch, and terminal status handling.
+- `services/scheduler.py`: deterministic polling of due posts.
 
-- `auth`: identities, passwords, sessions, JWT and CSRF.
-- `users`: future users and roles.
-- `channels`: production and test Telegram destinations.
-- `media`: logical assets, immutable versions, physical blobs and derivatives.
-- `posts`: drafts, captions, tags, buttons, albums and workflow state.
-- `scheduler`: durable due-post claiming, ordering and missed-run policy.
-- `publishing`: Telegram requests, retries, idempotency evidence and attempts.
-- `audit`: immutable security and business activity records.
-- `notifications`: persistent in-dashboard events.
-- `backups`: verified export and restore operations.
-- `integrations`: non-blocking signed n8n webhooks.
+## Current reliability model
 
-Cross-module communication must pass through service interfaces. HTTP routes validate transport concerns and call services; routes do not implement business rules.
+- The JSON file is written through a temporary file, `fsync`, and atomic replacement.
+- Media and post data live below persistent mounted paths.
+- Pending schedules are re-read after process restart.
+- Telegram connection failures are separated from ambiguous delivery outcomes.
+- Ambiguous delivery outcomes become `delivery_uncertain` and are not blindly retried.
+- Missing referenced media fails the post rather than silently sending text-only content.
+- The process must run with one API worker because the current JSON store and scheduler are process-local.
 
-## Reliability principles
+## Security model in 0.1.1
 
-1. The database is the source of truth for post schedules.
-2. APScheduler will wake the worker but will not own irreplaceable schedule state.
-3. Publishing attempts are durable and uniquely identified.
-4. Ambiguous Telegram outcomes become `delivery_uncertain`; they are not retried blindly.
-5. Scheduled posts reference immutable media versions.
-6. n8n is optional and cannot block publishing.
-7. Every production data path is mounted outside the container filesystem.
+- Temporary HTTP Basic Auth protects the Next.js UI when credentials are configured.
+- A separate `INTERNAL_API_KEY` protects FastAPI write endpoints in production.
+- The gateway strips browser authorization and internal-key headers before forwarding and injects its own internal key.
+- Telegram tokens are loaded as secret settings and are not returned to clients or written to logs.
+- Host allowlisting, explicit CORS, restrictive response headers, request-ID sanitization, bounded request timeouts, upload validation, and managed-path validation are enabled.
 
-## Security baseline
+## Planned production architecture
 
-- Containers run as non-root with dropped Linux capabilities.
-- Caddy terminates TLS and removes server-identifying headers.
-- API host allowlisting prevents host-header abuse.
-- CORS is explicit and credential-aware.
-- Browser responses receive anti-framing, MIME-sniffing and restrictive permissions headers.
-- Request IDs are sanitized before entering logs.
-- Production errors never expose stack traces or filesystem paths.
-- Authentication secrets are introduced only in Phase 3 and will be stored through secret-safe settings types.
-
-## Scale assumptions
-
-The initial workload is approximately three posts per day with one administrator, one production channel and one test channel. The architecture avoids premature distributed systems. PostgreSQL, object storage and additional workers can be introduced through configuration and service adapters when concurrency or storage requirements justify them.
+Phase 2 replaces `posts.json` with SQLite/PostgreSQL through SQLAlchemy and Alembic. Later phases add transactional job claiming, durable attempts and retries, encrypted channel credentials, JWT sessions, roles, audit records, notifications, backups, and immutable media versions. Those changes are intentionally not simulated by placeholders in this archive.

@@ -9,6 +9,7 @@ services:
     env_file:
       - .env
     environment:
+      PORT: "8000"
       STORAGE_ROOT: /data/storage
       BACKUP_ROOT: /data/backups
       TEMP_ROOT: /data/tmp
@@ -44,6 +45,7 @@ services:
     env_file:
       - .env
     environment:
+      PORT: "3000"
       API_INTERNAL_URL: http://api:8000
     expose:
       - "3000"

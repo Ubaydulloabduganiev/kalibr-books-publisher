@@ -50,6 +50,7 @@ async def readiness(request: Request, response: Response) -> HealthResponse:
     checks: dict[str, HealthCheck] = {}
     paths = {
         "storage": settings.storage_root,
+        "media": settings.media_root,
         "backups": settings.backup_root,
         "temporary": settings.temp_root,
         "logs": settings.log_root,
@@ -57,11 +58,13 @@ async def readiness(request: Request, response: Response) -> HealthResponse:
 
     for name, path in paths.items():
         try:
-            checks[name] = HealthCheck(status="pass", details=check_writable_directory(path))
+            details = check_writable_directory(path)
+            details.pop("path", None)
+            checks[name] = HealthCheck(status="pass", details=details)
         except OSError as exc:
             checks[name] = HealthCheck(
                 status="fail",
-                details={"path": str(path), "error": type(exc).__name__},
+                details={"error": type(exc).__name__},
             )
 
     all_checks_pass = all(check.status == "pass" for check in checks.values())

@@ -1,20 +1,97 @@
-# Ubuntu VPS deployment
+# Deployment guide
 
-The recommended production address is `publisher.uboom.uz`. A subdomain avoids path-prefix problems with cookies, routing, static assets and CSRF boundaries.
+## Render Blueprint deployment
 
-## 1. DNS
+The repository includes `render.yaml` for two Docker services:
 
-Create an `A` record:
+- `kalibr-books-api`
+- `kalibr-books-web`
+
+The Blueprint creates one shared generated `INTERNAL_API_KEY`, connects the web service to the API through Render's private service address, and mounts API data at `/data`.
+
+### Required operator values
+
+When creating or updating the Blueprint, enter these secret values when Render requests them:
+
+- `TELEGRAM_BOT_TOKEN`
+- `ADMIN_BASIC_PASSWORD`
+
+Keep `ADMIN_BASIC_USERNAME=admin` or change it after deployment. The bot must be an administrator in the target channel.
+
+### Deployment steps
+
+1. Push this fixed source tree to the private Git repository connected to Render.
+2. In Render, create a Blueprint from the repository, or update the existing Blueprint.
+3. Confirm that both services use the repository root as Docker context and their respective Dockerfiles.
+4. Enter the required secret values.
+5. Deploy the API first, then the web service if Render does not order them automatically.
+6. Verify:
 
 ```text
-publisher.uboom.uz -> YOUR_VPS_IPV4
+https://kalibr-books-api.onrender.com/
+https://kalibr-books-api.onrender.com/api/v1/health/ready
+https://kalibr-books-web.onrender.com/api/health
+https://kalibr-books-web.onrender.com/uz
 ```
 
-Add an `AAAA` record only when IPv6 is correctly routed to the server.
+The API root now returns service metadata. It should no longer return `{"detail":"Not Found"}`.
 
-## 2. Host preparation
+### Existing manually created Render services
 
-Install Docker Engine and the Docker Compose plugin from Docker's official Ubuntu repository. Configure the firewall:
+A manually configured pair does not automatically inherit every Blueprint value. Ensure:
+
+**API**
+
+```dotenv
+PORT=10000
+APP_ENV=production
+APP_VERSION=0.1.1
+INTERNAL_API_KEY=<same long random value as web>
+STORAGE_ROOT=/data/storage
+BACKUP_ROOT=/data/backups
+TEMP_ROOT=/data/tmp
+LOG_ROOT=/data/logs
+API_ALLOWED_HOSTS=kalibr-books-api.onrender.com,kalibr-books-api,localhost,127.0.0.1
+API_CORS_ORIGINS=https://kalibr-books-web.onrender.com
+TELEGRAM_BOT_TOKEN=<secret>
+TELEGRAM_DEFAULT_CHANNEL=@kalibr_books
+```
+
+Attach a persistent disk mounted at `/data`.
+
+**Web**
+
+```dotenv
+PORT=10000
+API_INTERNAL_URL=<Render private API host:port, or https://kalibr-books-api.onrender.com>
+INTERNAL_API_KEY=<same long random value as API>
+ADMIN_BASIC_USERNAME=admin
+ADMIN_BASIC_PASSWORD=<strong secret>
+NEXT_PUBLIC_APP_NAME=Kalibr Publisher
+NEXT_PUBLIC_DEFAULT_LOCALE=uz
+```
+
+Do not append `/api/v1` to `API_INTERNAL_URL`.
+
+### Render operating constraint
+
+The current JSON store requires exactly one API instance and one API worker. Do not enable autoscaling or multiple API instances until the SQLAlchemy database phase is complete.
+
+## Ubuntu VPS deployment
+
+The recommended production URL is:
+
+```text
+publisher.uboom.uz
+```
+
+### DNS
+
+Create an `A` record pointing `publisher.uboom.uz` to the VPS IPv4 address.
+
+### Host preparation
+
+Install Docker Engine and Docker Compose, then configure the firewall:
 
 ```bash
 sudo ufw allow OpenSSH
@@ -24,55 +101,51 @@ sudo ufw allow 443/udp
 sudo ufw enable
 ```
 
-Create persistent directories owned by container UID/GID `10001`:
+Create persistent directories:
 
 ```bash
 sudo mkdir -p /srv/kalibr-publisher/{storage,backups,tmp,logs}
-sudo chown -R 10001:10001 /srv/kalibr-publisher
-sudo chmod -R 750 /srv/kalibr-publisher
+sudo chmod 750 /srv/kalibr-publisher
 ```
 
-## 3. Application configuration
+The API entrypoint prepares ownership for its non-root runtime user on first start.
+
+### Configuration
 
 ```bash
 git clone YOUR_PRIVATE_REPOSITORY_URL /opt/kalibr-publisher
 cd /opt/kalibr-publisher
 cp .env.example .env
+chmod 600 .env
 ```
 
-Set at minimum:
+At minimum, change:
 
 ```dotenv
 APP_ENV=production
 APP_DOMAIN=publisher.uboom.uz
-API_ALLOWED_HOSTS=publisher.uboom.uz,api
+API_ALLOWED_HOSTS=publisher.uboom.uz,api,localhost,127.0.0.1
 API_CORS_ORIGINS=https://publisher.uboom.uz
 API_LOG_FORMAT=json
 API_DOCS_ENABLED=false
-CADDY_EMAIL=YOUR_ADMIN_EMAIL
 KALIBR_DATA_DIR=/srv/kalibr-publisher
+INTERNAL_API_KEY=<long random value>
+ADMIN_BASIC_USERNAME=admin
+ADMIN_BASIC_PASSWORD=<strong password>
+TELEGRAM_BOT_TOKEN=<secret>
+TELEGRAM_DEFAULT_CHANNEL=@kalibr_books
+CADDY_EMAIL=<operator email>
 ```
 
-Protect the file:
-
-```bash
-chmod 600 .env
-```
-
-## 4. Start
+### Start and verify
 
 ```bash
 docker compose -f docker-compose.production.yml up -d --build
-```
-
-Verify:
-
-```bash
-curl -fsS https://publisher.uboom.uz/api/v1/health/ready
 curl -fsS https://publisher.uboom.uz/api/health
+curl -u admin:YOUR_PASSWORD -fsS https://publisher.uboom.uz/api/v1/health/ready
 ```
 
-## 5. Updates
+### Updates
 
 ```bash
 cd /opt/kalibr-publisher
@@ -81,20 +154,4 @@ docker compose -f docker-compose.production.yml up -d --build --remove-orphans
 docker image prune -f
 ```
 
-Do not remove `/srv/kalibr-publisher` during deployments. Containers are disposable; that directory contains persistent data.
-
-## 6. Operations
-
-View logs:
-
-```bash
-docker compose -f docker-compose.production.yml logs -f --tail=200
-```
-
-Check container health:
-
-```bash
-docker compose -f docker-compose.production.yml ps
-```
-
-Caddy handles TLS certificates automatically. API and web ports are not published directly in production; only Caddy exposes ports 80 and 443.
+Never delete `/srv/kalibr-publisher` during deployment.

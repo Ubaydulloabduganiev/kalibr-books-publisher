@@ -10,35 +10,17 @@ from kalibr_publisher.core.config import Settings
 
 
 def ensure_runtime_directories(settings: Settings) -> None:
-    """Create configured runtime directories; best-effort so startup never fails.
-
-    On platforms where the configured paths are not writable (e.g. a missing
-    persistent disk), we log and continue rather than crashing or blocking the
-    process startup.
-    """
-    import logging
-
-    logger = logging.getLogger(__name__)
+    """Create required directories and fail startup when persistence is unavailable."""
     for directory in settings.runtime_directories:
-        try:
-            directory.mkdir(parents=True, exist_ok=True)
-            _ = directory.is_dir()
-        except OSError as exc:
-            logger.warning("runtime_directory_unavailable", path=str(directory), error=str(exc))
-        except Exception as exc:  # noqa: BLE001 - never let startup block
-            logger.warning("runtime_directory_error", path=str(directory), error=str(exc))
+        directory.mkdir(parents=True, exist_ok=True)
+        if not directory.is_dir():
+            raise OSError(f"Runtime path is not a directory: {directory}")
 
 
 def check_writable_directory(path: Path) -> dict[str, int | str]:
-    """Verify a directory can create files and report free disk capacity."""
     path.mkdir(parents=True, exist_ok=True)
     with tempfile.NamedTemporaryFile(prefix=".kalibr-health-", dir=path) as probe:
         probe.write(b"ok")
         probe.flush()
-
     usage = shutil.disk_usage(path)
-    return {
-        "path": str(path),
-        "free_bytes": usage.free,
-        "total_bytes": usage.total,
-    }
+    return {"path": str(path), "free_bytes": usage.free, "total_bytes": usage.total}

@@ -4,57 +4,72 @@
 
 ```bash
 cp .env.example .env
+# Set a non-default INTERNAL_API_KEY and ADMIN_BASIC_PASSWORD.
 docker compose up --build
 ```
 
-Docker starts:
+Services:
 
-- `api` at `http://localhost:8000` with code reload.
-- `web` at `http://localhost:3000` with Turbopack reload.
-- persistent local folders mounted from `storage`, `backups`, `tmp`, and `logs`.
+- API: `http://localhost:8000`
+- Web: `http://localhost:3000`
+- API docs: `http://localhost:8000/docs`
+
+The development API uses the named Docker volume `api-data`. This avoids host UID/GID problems while preserving media and `posts.json` across normal container recreation.
 
 Inspect health:
 
 ```bash
+curl http://localhost:8000/
 curl http://localhost:8000/api/v1/health/live
 curl http://localhost:8000/api/v1/health/ready
 curl http://localhost:3000/api/health
 ```
 
-Stop the stack:
+Stop:
 
 ```bash
 docker compose down
 ```
 
+To intentionally delete local Docker data:
+
+```bash
+docker compose down -v
+```
+
 ## Native workflow
 
-Requirements: Python 3.12, uv 0.11.28+, Node.js 22 and npm 10.
+Requirements: Python 3.12, uv 0.11.28+, Node.js 22, and npm 10.
 
 ```bash
 cp .env.example .env
 make bootstrap
 ```
 
+For native API development, update paths in `.env` to writable local paths or export them before launch.
+
 Terminal 1:
 
 ```bash
 cd apps/api
+STORAGE_ROOT=../../storage \
+BACKUP_ROOT=../../backups \
+TEMP_ROOT=../../tmp \
+LOG_ROOT=../../logs \
 uv run uvicorn kalibr_publisher.main:app --reload --no-access-log
 ```
 
 Terminal 2:
 
 ```bash
-npm run web:dev
+API_INTERNAL_URL=http://127.0.0.1:8000 npm run web:dev
 ```
-
-When the web application runs natively, set `API_INTERNAL_URL=http://127.0.0.1:8000`.
 
 ## Quality gate
 
 ```bash
 make check
+npm run web:build
 ```
 
-This runs Ruff lint and formatting checks, strict mypy, pytest with branch coverage, ESLint, TypeScript strict checking, and Vitest.
+The gate runs Ruff, formatting checks, strict mypy on application source, pytest with branch coverage, ESLint, TypeScript checking, and Vitest.

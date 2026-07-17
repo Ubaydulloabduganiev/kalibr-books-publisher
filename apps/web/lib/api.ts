@@ -27,7 +27,6 @@ export type SystemSnapshot = {
   error: string | null;
 };
 
-
 export type PublishTarget = "default" | "custom";
 
 export type TelegramPublishRequest = {
@@ -36,6 +35,7 @@ export type TelegramPublishRequest = {
   chat_id?: string | null;
   parse_mode?: "Markdown" | "MarkdownV2" | "HTML" | null;
   disable_web_page_preview?: boolean;
+  disable_notification?: boolean;
 };
 
 export type TelegramPublishResponse = {
@@ -50,22 +50,68 @@ export type PublishResult = {
   error: string | null;
 };
 
+export type ScheduleMode = "once" | "recurring";
+
+export interface MediaItem {
+  kind: "photo" | "video" | "animation" | "document";
+  path: string;
+}
+
+export interface ScheduleInput {
+  mode?: ScheduleMode;
+  run_at?: string | null;
+  every_hours?: number | null;
+  end_at?: string | null;
+}
+
+export interface PostOut {
+  id: string;
+  text: string;
+  media: MediaItem[];
+  target: string | null;
+  parse_mode: string | null;
+  schedule: ScheduleInput & { next_run?: string | null };
+  status: string;
+  created_at: string;
+  sent_at: string | null;
+  last_error: string | null;
+  send_count: number;
+}
+
+export interface PostInput {
+  text: string;
+  media?: MediaItem[];
+  target?: string | null;
+  parse_mode?: "Markdown" | "MarkdownV2" | "HTML" | null;
+  schedule: ScheduleInput;
+}
+
+function normalizeServerApiUrl(value: string | undefined): string {
+  const normalized = value?.trim().replace(/\/+$/, "");
+  if (!normalized) return "http://127.0.0.1:8000";
+  if (/^https?:\/\//i.test(normalized)) return normalized;
+  return `http://${normalized}`;
+}
+
 const apiBaseUrl =
-  typeof window === "undefined"
-    ? process.env.API_INTERNAL_URL ?? "http://127.0.0.1:8000"
-    : "";
+  typeof window === "undefined" ? normalizeServerApiUrl(process.env.API_INTERNAL_URL) : "";
+
+async function readApiError(response: Response, fallback: string): Promise<string> {
+  const payload = (await response.json().catch(() => null)) as
+    | { error?: { message?: string }; detail?: string }
+    | null;
+  return payload?.error?.message ?? payload?.detail ?? fallback;
+}
 
 async function fetchJson<T>(path: string): Promise<T> {
   const response = await fetch(`${apiBaseUrl}${path}`, {
     cache: "no-store",
-    signal: AbortSignal.timeout(8000),
+    signal: AbortSignal.timeout(10_000),
     headers: { Accept: "application/json" },
   });
-
   if (!response.ok) {
-    throw new Error(`API returned HTTP ${response.status}`);
+    throw new Error(await readApiError(response, `API returned HTTP ${response.status}`));
   }
-
   return (await response.json()) as T;
 }
 
@@ -93,89 +139,25 @@ export async function publishToTelegram(
       body: JSON.stringify(payload),
     });
     if (!response.ok) {
-      const detail = (await response.json().catch(() => null)) as
-        | { error?: { message?: string } }
-        | null;
       return {
         ok: false,
         data: null,
-        error: detail?.error?.message ?? `API returned HTTP ${response.status}`,
+        error: await readApiError(response, `API returned HTTP ${response.status}`),
       };
     }
-    const data = (await response.json()) as TelegramPublishResponse;
-    return { ok: true, data, error: null };
+    return { ok: true, data: (await response.json()) as TelegramPublishResponse, error: null };
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown API error";
-    return { ok: false, data: null, error: message };
+    return {
+      ok: false,
+      data: null,
+      error: error instanceof Error ? error.message : "Unknown API error",
+    };
   }
 }
 
-
-// --- Bulk posts + media + scheduling ---
-
-export type ScheduleMode = "once" | "recurring";
-
-export interface MediaItem {
-  kind: "photo" | "video";
-  path: string;
-}
-
-export interface ScheduleInput {
-  mode?: ScheduleMode;
-  run_at?: string | null;
-  every_hours?: number | null;
-  end_at?: string | null;
-}
-
-export interface AiConfigInput {
-  rewrite?: boolean;
-  language?: string;
-  choose_order?: boolean;
-  choose_time?: boolean;
-}
-
-export interface PostInput {
-  text: string;
-  media?: MediaItem[];
-  target?: string | null;
-  schedule?: ScheduleInput;
-  ai?: AiConfigInput;
-}
-
-export interface PostOut {
-  id: string;
-  text: string;
-  media: MediaItem[];
-  target: string | null;
-  parse_mode: string | null;
-  schedule: ScheduleInput & { next_run?: string | null };
-  ai: AiConfigInput;
-  status: string;
-  created_at: string;
-  sent_at: string | null;
-  last_error: string | null;
-  send_count: number;
-}
-
-export interface UploadResult {
-  ok: boolean;
-  data?: { path: string; kind: string; size: number };
-  error?: string;
-}
-
-export interface CreateResult {
-  ok: boolean;
-  data?: PostOut;
-  error?: string;
-}
-
-export interface ListResult {
-  ok: boolean;
-  data?: { count: number; posts: PostOut[] };
-  error?: string;
-}
-
-export async function uploadMedia(file: File): Promise<UploadResult> {
+export async function uploadMedia(
+  file: File,
+): Promise<{ ok: boolean; data?: { path: string; kind: string; size: number }; error?: string }> {
   try {
     const form = new FormData();
     form.append("file", file);
@@ -185,20 +167,20 @@ export async function uploadMedia(file: File): Promise<UploadResult> {
       body: form,
     });
     if (!response.ok) {
-      const detail = (await response.json().catch(() => null)) as
-        | { error?: { message?: string } }
-        | null;
-      return { ok: false, error: detail?.error?.message ?? "Upload failed" };
+      return { ok: false, error: await readApiError(response, "Upload failed") };
     }
-    const data = (await response.json()) as { path: string; kind: string; size: number };
-    return { ok: true, data };
+    return {
+      ok: true,
+      data: (await response.json()) as { path: string; kind: string; size: number },
+    };
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown API error";
-    return { ok: false, error: message };
+    return { ok: false, error: error instanceof Error ? error.message : "Unknown API error" };
   }
 }
 
-export async function createPost(payload: PostInput): Promise<CreateResult> {
+export async function createPost(
+  payload: PostInput,
+): Promise<{ ok: boolean; data?: PostOut; error?: string }> {
   try {
     const response = await fetch(`${apiBaseUrl}/api/v1/posts`, {
       method: "POST",
@@ -207,150 +189,89 @@ export async function createPost(payload: PostInput): Promise<CreateResult> {
       body: JSON.stringify(payload),
     });
     if (!response.ok) {
-      const detail = (await response.json().catch(() => null)) as
-        | { error?: { message?: string } }
-        | null;
-      return { ok: false, error: detail?.error?.message ?? "Create failed" };
+      return { ok: false, error: await readApiError(response, "Create failed") };
     }
-    const data = (await response.json()) as PostOut;
-    return { ok: true, data };
+    return { ok: true, data: (await response.json()) as PostOut };
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown API error";
-    return { ok: false, error: message };
+    return { ok: false, error: error instanceof Error ? error.message : "Unknown API error" };
   }
 }
 
-export async function listPosts(): Promise<ListResult> {
+export async function createPostsBulk(
+  posts: PostInput[],
+): Promise<{ ok: boolean; data?: { created: number; ids: string[] }; error?: string }> {
+  try {
+    const response = await fetch(`${apiBaseUrl}/api/v1/posts/bulk`, {
+      method: "POST",
+      cache: "no-store",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ posts }),
+    });
+    if (!response.ok) {
+      return { ok: false, error: await readApiError(response, "Bulk create failed") };
+    }
+    return {
+      ok: true,
+      data: (await response.json()) as { created: number; ids: string[] },
+    };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "Unknown API error" };
+  }
+}
+
+export async function listPosts(): Promise<{
+  ok: boolean;
+  data?: { count: number; posts: PostOut[] };
+  error?: string;
+}> {
   try {
     const response = await fetch(`${apiBaseUrl}/api/v1/posts`, {
-      method: "GET",
       cache: "no-store",
       headers: { Accept: "application/json" },
     });
     if (!response.ok) {
-      const detail = (await response.json().catch(() => null)) as
-        | { error?: { message?: string } }
-        | null;
-      return { ok: false, error: detail?.error?.message ?? "List failed" };
+      return { ok: false, error: await readApiError(response, "List failed") };
     }
-    const data = (await response.json()) as { count: number; posts: PostOut[] };
-    return { ok: true, data };
+    return {
+      ok: true,
+      data: (await response.json()) as { count: number; posts: PostOut[] },
+    };
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown API error";
-    return { ok: false, error: message };
+    return { ok: false, error: error instanceof Error ? error.message : "Unknown API error" };
   }
 }
 
 export async function schedulePost(
   id: string,
   schedule: ScheduleInput,
-): Promise<CreateResult> {
+): Promise<{ ok: boolean; data?: PostOut; error?: string }> {
   try {
-    const response = await fetch(`${apiBaseUrl}/api/v1/posts/${id}/schedule`, {
+    const response = await fetch(`${apiBaseUrl}/api/v1/posts/${encodeURIComponent(id)}/schedule`, {
       method: "POST",
       cache: "no-store",
       headers: { "Content-Type": "application/json", Accept: "application/json" },
       body: JSON.stringify(schedule),
     });
     if (!response.ok) {
-      const detail = (await response.json().catch(() => null)) as
-        | { error?: { message?: string } }
-        | null;
-      return { ok: false, error: detail?.error?.message ?? "Schedule failed" };
+      return { ok: false, error: await readApiError(response, "Schedule failed") };
     }
-    const data = (await response.json()) as PostOut;
-    return { ok: true, data };
+    return { ok: true, data: (await response.json()) as PostOut };
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown API error";
-    return { ok: false, error: message };
+    return { ok: false, error: error instanceof Error ? error.message : "Unknown API error" };
   }
 }
 
 export async function deletePost(id: string): Promise<{ ok: boolean; error?: string }> {
   try {
-    const response = await fetch(`${apiBaseUrl}/api/v1/posts/${id}`, {
+    const response = await fetch(`${apiBaseUrl}/api/v1/posts/${encodeURIComponent(id)}`, {
       method: "DELETE",
       cache: "no-store",
     });
     if (!response.ok) {
-      const detail = (await response.json().catch(() => null)) as
-        | { error?: { message?: string } }
-        | null;
-      return { ok: false, error: detail?.error?.message ?? "Delete failed" };
+      return { ok: false, error: await readApiError(response, "Delete failed") };
     }
     return { ok: true };
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown API error";
-    return { ok: false, error: message };
-  }
-}
-
-
-export interface AutomationItem {
-  id: string;
-  title: string;
-  run_at: string;
-  image: string;
-  text: string;
-}
-
-export interface AutomationResult {
-  source: string;
-  created: number;
-  items: AutomationItem[];
-}
-
-export async function automationPlanFile(
-  file: File,
-  language: string,
-  staggerHours: number,
-): Promise<{ ok: boolean; data: AutomationResult | null; error?: string }> {
-  try {
-    const body = new FormData();
-    body.append("file", file);
-    body.append("language", language);
-    body.append("stagger_hours", String(staggerHours));
-    const response = await fetch(`${apiBaseUrl}/api/v1/automation/plan-file`, {
-      method: "POST",
-      cache: "no-store",
-      body,
-    });
-    if (!response.ok) {
-      const detail = (await response.json().catch(() => null)) as
-        | { error?: { message?: string } }
-        | null;
-      return { ok: false, data: null, error: detail?.error?.message ?? `API returned HTTP ${response.status}` };
-    }
-    const data = (await response.json()) as AutomationResult;
-    return { ok: true, data };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown API error";
-    return { ok: false, data: null, error: message };
-  }
-}
-
-export async function automationPlanText(
-  text: string,
-  language: string,
-  staggerHours: number,
-): Promise<{ ok: boolean; data: AutomationResult | null; error?: string }> {
-  try {
-    const response = await fetch(`${apiBaseUrl}/api/v1/automation/plan-text`, {
-      method: "POST",
-      cache: "no-store",
-      headers: { "Content-Type": "application/json", Accept: "application/json" },
-      body: JSON.stringify({ text, language, stagger_hours: staggerHours }),
-    });
-    if (!response.ok) {
-      const detail = (await response.json().catch(() => null)) as
-        | { error?: { message?: string } }
-        | null;
-      return { ok: false, data: null, error: detail?.error?.message ?? `API returned HTTP ${response.status}` };
-    }
-    const data = (await response.json()) as AutomationResult;
-    return { ok: true, data };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown API error";
-    return { ok: false, data: null, error: message };
+    return { ok: false, error: error instanceof Error ? error.message : "Unknown API error" };
   }
 }

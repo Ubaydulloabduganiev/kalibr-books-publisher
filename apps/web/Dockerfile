@@ -36,5 +36,5 @@ COPY --from=builder --chown=kalibr:kalibr /app/apps/web/.next/static ./apps/web/
 COPY --from=builder --chown=kalibr:kalibr /app/apps/web/public ./apps/web/public
 
 USER kalibr
-EXPOSE 3000
+EXPOSE 3000 10000
 CMD ["node", "apps/web/server.js"]

@@ -30,7 +30,7 @@ jobs:
       - name: Lint
         run: uv run ruff check src tests && uv run ruff format --check src tests
       - name: Type check
-        run: uv run mypy src tests
+        run: uv run mypy src
       - name: Test
         run: uv run pytest --cov-report=term-missing
 

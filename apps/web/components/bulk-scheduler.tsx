@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  createPost,
+  createPostsBulk,
   deletePost,
   listPosts,
   schedulePost,
@@ -58,7 +58,13 @@ export function BulkScheduler({ messages }: Props) {
   }
 
   useEffect(() => {
-    refresh();
+    let active = true;
+    void listPosts().then((result) => {
+      if (active && result.ok && result.data) setQueue(result.data.posts);
+    });
+    return () => {
+      active = false;
+    };
   }, []);
 
   function update(id: string, patch: Partial<DraftPost>) {
@@ -74,49 +80,81 @@ export function BulkScheduler({ messages }: Props) {
       setStatus("error");
       return;
     }
-    update(id, {
-      media: [...drafts.find((d) => d.id === id)!.media, { kind: res.data.kind as "photo" | "video", path: res.data.path }],
-    });
+    const uploadedMedia: MediaItem = {
+      kind: res.data.kind as MediaItem["kind"],
+      path: res.data.path,
+    };
+    setDrafts((previous) =>
+      previous.map((draft) =>
+        draft.id === id ? { ...draft, media: [...draft.media, uploadedMedia] } : draft,
+      ),
+    );
   }
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     const valid = drafts.filter((d) => d.text.trim().length > 0);
     if (valid.length === 0) return;
+    if (valid.some((draft) => !draft.runAt)) {
+      setStatus("error");
+      setMessage(t.scheduleRequired);
+      return;
+    }
     setStatus("saving");
     setMessage(null);
-    let created = 0;
-    for (const d of valid) {
+    const posts = valid.map((draft) => {
       const schedule: ScheduleInput =
-        d.mode === "recurring"
-          ? { mode: "recurring", every_hours: Number(d.everyHours) || 24 }
-          : { mode: "once", run_at: d.runAt ? new Date(d.runAt).toISOString() : null };
-      const res = await createPost({
-        text: d.text,
-        media: d.media,
-        target: d.target === "custom" ? d.chatId : null,
+        draft.mode === "recurring"
+          ? {
+              mode: "recurring",
+              run_at: new Date(draft.runAt).toISOString(),
+              every_hours: Number(draft.everyHours) || 24,
+            }
+          : { mode: "once", run_at: new Date(draft.runAt).toISOString() };
+      return {
+        text: draft.text,
+        media: draft.media,
+        target: draft.target === "custom" ? draft.chatId : null,
         schedule,
-      });
-      if (res.ok) created += 1;
-    }
-    if (created > 0) {
+      };
+    });
+    const result = await createPostsBulk(posts);
+    if (result.ok && result.data) {
       setStatus("ok");
-      setMessage(`${t.success} (${created})`);
+      setMessage(`${t.success} (${result.data.created})`);
       setDrafts([blankDraft()]);
       await refresh();
     } else {
       setStatus("error");
-      setMessage(t.error);
+      setMessage(result.error ?? t.error);
     }
   }
 
   async function handleDelete(id: string) {
-    await deletePost(id);
+    const result = await deletePost(id);
+    if (!result.ok) {
+      setStatus("error");
+      setMessage(result.error ?? t.error);
+      return;
+    }
+    setMessage(null);
     await refresh();
   }
 
-  async function handleNow(id: string) {
-    await schedulePost(id, { mode: "once", run_at: null });
+  async function handleNow(post: PostOut) {
+    if (post.status === "delivery_uncertain" && !window.confirm(t.uncertainConfirmation)) {
+      return;
+    }
+    const result = await schedulePost(post.id, {
+      mode: "once",
+      run_at: new Date().toISOString(),
+    });
+    if (!result.ok) {
+      setStatus("error");
+      setMessage(result.error ?? t.error);
+      return;
+    }
+    setMessage(null);
     await refresh();
   }
 
@@ -153,7 +191,7 @@ export function BulkScheduler({ messages }: Props) {
                   <Upload className="h-4 w-4" />
                   <input
                     type="file"
-                    accept="image/*,video/*"
+                    accept="image/*,video/*,.pdf,.doc,.docx"
                     className="hidden"
                     onChange={(e) => {
                       const f = e.target.files?.[0];
@@ -206,14 +244,22 @@ export function BulkScheduler({ messages }: Props) {
                     onChange={(e) => update(d.id, { runAt: e.target.value })}
                   />
                 ) : (
-                  <input
-                    type="number"
-                    min={1}
-                    className="rounded border border-input bg-background px-3 py-2 text-sm"
-                    placeholder={t.everyHours}
-                    value={d.everyHours}
-                    onChange={(e) => update(d.id, { everyHours: e.target.value })}
-                  />
+                  <div className="grid gap-2">
+                    <input
+                      type="datetime-local"
+                      className="rounded border border-input bg-background px-3 py-2 text-sm"
+                      value={d.runAt}
+                      onChange={(e) => update(d.id, { runAt: e.target.value })}
+                    />
+                    <input
+                      type="number"
+                      min={1}
+                      className="rounded border border-input bg-background px-3 py-2 text-sm"
+                      placeholder={t.everyHours}
+                      value={d.everyHours}
+                      onChange={(e) => update(d.id, { everyHours: e.target.value })}
+                    />
+                  </div>
                 )}
               </div>
             </div>
@@ -249,12 +295,18 @@ export function BulkScheduler({ messages }: Props) {
                     {p.media.length > 0 ? ` (+${p.media.length} media)` : ""}
                   </div>
                   <div className="flex gap-2">
-                    <Button size="sm" variant="ghost" onClick={() => handleNow(p.id)}>
-                      {t.sendNow}
-                    </Button>
-                    <Button size="sm" variant="ghost" onClick={() => handleDelete(p.id)}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    {p.status !== "sent" && p.status !== "publishing" ? (
+                      <Button size="sm" variant="ghost" onClick={() => handleNow(p)}>
+                        {t.sendNow}
+                      </Button>
+                    ) : null}
+                    {p.status !== "sent" &&
+                    p.status !== "publishing" &&
+                    p.status !== "delivery_uncertain" ? (
+                      <Button size="sm" variant="ghost" onClick={() => handleDelete(p.id)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    ) : null}
                   </div>
                 </li>
               ))}

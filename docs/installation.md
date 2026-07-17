@@ -1,29 +1,41 @@
 # Installation guide
 
-## Recommended: Docker development environment
+## Docker development environment
 
-### Prerequisites
+### Requirements
 
-- Docker Engine 26 or newer
-- Docker Compose v2
+- Docker Engine with Docker Compose v2
 - Git
 
-### Install
+### Install and start
 
 ```bash
 git clone <private-repository-url> kalibr-publisher
 cd kalibr-publisher
 cp .env.example .env
+```
+
+Before exposing the application, change at least:
+
+```dotenv
+INTERNAL_API_KEY=<long random value>
+ADMIN_BASIC_PASSWORD=<strong password>
+```
+
+Then start:
+
+```bash
 docker compose up --build
 ```
 
-The development services are then available at:
+Open:
 
-- Web interface: `http://localhost:3000`
-- FastAPI documentation: `http://localhost:8000/docs`
+- Web: `http://localhost:3000`
+- API root: `http://localhost:8000/`
+- API docs: `http://localhost:8000/docs`
 - API readiness: `http://localhost:8000/api/v1/health/ready`
 
-Stop the services without removing persistent data:
+Stop without deleting the named data volumes:
 
 ```bash
 docker compose down
@@ -31,41 +43,41 @@ docker compose down
 
 ## Native development environment
 
-Use native installation only when Docker is unsuitable for local debugging.
-
-### Prerequisites
+Requirements:
 
 - Python 3.12
-- uv 0.11.28 or newer
+- uv 0.11.28+
 - Node.js 22
-- npm 10
+- npm 10+
 
-### Install dependencies
+Install dependencies:
 
 ```bash
 cp .env.example .env
 make bootstrap
 ```
 
-### Run the API
+Run the API:
 
 ```bash
+STORAGE_ROOT=../../storage \
+BACKUP_ROOT=../../backups \
+TEMP_ROOT=../../tmp \
+LOG_ROOT=../../logs \
 make api-dev
 ```
 
-### Run the web application
-
-In a second terminal:
+Run the web application in another terminal:
 
 ```bash
-make web-dev
+API_INTERNAL_URL=http://127.0.0.1:8000 make web-dev
 ```
 
-### Validate the installation
+Validate:
 
 ```bash
 make check
 npm run web:build
 ```
 
-Production installation is documented in [`deployment.md`](deployment.md).
+See [`deployment.md`](deployment.md) for Render and Ubuntu VPS deployment.

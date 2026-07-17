@@ -1,38 +1,91 @@
-# Phase 1 API documentation
+# API documentation — version 0.1.1
 
-FastAPI generates interactive OpenAPI documentation from the running service:
+FastAPI exposes interactive documentation when `API_DOCS_ENABLED=true`:
 
 - Swagger UI: `/docs`
 - ReDoc: `/redoc`
 - OpenAPI JSON: `/openapi.json`
 
-All application endpoints are versioned under `/api/v1`.
+Application endpoints use the `/api/v1` prefix.
 
-## `GET /api/v1/health/live`
+## Public system endpoints
 
-Confirms that the API process is running. This endpoint does not inspect external dependencies.
+### `GET /`
 
-Successful response:
+Returns a small service document instead of an unexplained 404.
+
+### `GET /api/v1/health/live`
+
+Confirms that the API process can serve requests.
+
+### `GET /api/v1/health/ready`
+
+Checks the writable state and free space of storage, media, backup, temporary, and log directories. Returns HTTP 503 when a required check fails.
+
+### `GET /api/v1/meta`
+
+Returns non-sensitive application metadata used by the web interface.
+
+## Protected write and post endpoints
+
+In production these endpoints require:
+
+```http
+X-Internal-API-Key: <shared secret>
+```
+
+The browser never receives that key. The Next.js gateway injects it server-side.
+
+### `POST /api/v1/telegram/publish`
+
+Immediately sends a text message to the default or an explicitly supplied Telegram target.
+
+### `POST /api/v1/posts/upload`
+
+Streams one supported media file to managed persistent storage. The default size limit is 100 MB and is controlled by `MAX_UPLOAD_MB`.
+
+### `POST /api/v1/posts`
+
+Creates one scheduled manual post. Every one-time or recurring schedule must include a timezone-aware `run_at`; omitting it is rejected so a post cannot be published accidentally.
+
+Example:
 
 ```json
 {
-  "status": "ok",
-  "service": "kalibr-publisher-api",
-  "version": "0.1.0"
+  "text": "Yangi kitobimiz sotuvda!",
+  "media": [{"kind": "photo", "path": "media/abc123.jpg"}],
+  "target": "@kalibr_books",
+  "parse_mode": "HTML",
+  "schedule": {
+    "mode": "once",
+    "run_at": "2026-07-20T10:00:00+05:00"
+  }
 }
 ```
 
-## `GET /api/v1/health/ready`
+### `POST /api/v1/posts/bulk`
 
-Checks whether runtime storage, backup, temporary and log directories exist, are writable and have sufficient free space. The endpoint returns HTTP 503 when a required check fails.
+Creates 1–100 scheduled posts in one request.
 
-## `GET /api/v1/meta`
+### `GET /api/v1/posts`
 
-Returns non-sensitive application metadata needed by the frontend. Secrets and filesystem paths are never included.
+Lists posts. Optional query: `?status=pending`.
+
+### `GET /api/v1/posts/{post_id}`
+
+Returns one post.
+
+### `POST /api/v1/posts/{post_id}/schedule`
+
+Changes a schedule. The web interface uses an explicit current UTC timestamp for “Send now.” Posts currently being published cannot be rescheduled, and already published posts must be duplicated rather than mutated in place.
+
+### `DELETE /api/v1/posts/{post_id}`
+
+Deletes a pending or failed post record from the current JSON store. Publishing, published, and delivery-uncertain records are protected because they form part of the delivery history.
 
 ## Error envelope
 
-Handled API errors use one stable structure:
+Handled errors use one stable structure:
 
 ```json
 {
@@ -46,6 +99,4 @@ Handled API errors use one stable structure:
 }
 ```
 
-In production, internal exception details are logged but not returned to clients.
-
-Database-backed, authentication, media, post, scheduling and Telegram endpoints are introduced in their corresponding implementation phases rather than represented by non-working placeholders.
+Production responses do not expose stack traces, Telegram tokens, filesystem paths, or upstream error bodies.

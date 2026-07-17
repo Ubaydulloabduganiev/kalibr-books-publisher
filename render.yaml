@@ -1,6 +1,11 @@
-# Render Blueprint — Kalibr Books Publisher (clone for @kalibr_books)
-# Deploy: New -> Blueprint -> connect this GitHub repo.
-# Two services: API (FastAPI) + Web (Next.js standalone).
+# Render Blueprint for the current two-service deployment.
+# The API is the data service; all browser requests go through the Next.js gateway.
+
+envVarGroups:
+  - name: kalibr-publisher-shared
+    envVars:
+      - key: INTERNAL_API_KEY
+        generateValue: true
 
 services:
   - type: web
@@ -8,20 +13,29 @@ services:
     runtime: docker
     dockerfilePath: ./apps/api/Dockerfile
     dockerContext: .
-    dockerfileTarget: production
     plan: starter
-    region: frankfurt
-    healthCheckPath: /api/v1/health/live
-    port: 8000
+    region: oregon
+    healthCheckPath: /api/v1/health/ready
     envVars:
+      - fromGroup: kalibr-publisher-shared
+      - key: PORT
+        value: "10000"
+      - key: APP_NAME
+        value: Kalibr Publisher
       - key: APP_ENV
         value: production
+      - key: APP_VERSION
+        value: 0.1.1
+      - key: APP_TIMEZONE
+        value: Asia/Tashkent
       - key: API_DOCS_ENABLED
         value: "false"
+      - key: API_LOG_FORMAT
+        value: json
       - key: API_CORS_ORIGINS
-        value: "https://kalibr-books-web.onrender.com,http://localhost:3000"
+        value: https://kalibr-books-web.onrender.com
       - key: API_ALLOWED_HOSTS
-        value: "localhost,127.0.0.1,kalibr-books-api.onrender.com"
+        value: kalibr-books-api.onrender.com,kalibr-books-api,localhost,127.0.0.1
       - key: STORAGE_ROOT
         value: /data/storage
       - key: BACKUP_ROOT
@@ -30,32 +44,41 @@ services:
         value: /data/tmp
       - key: LOG_ROOT
         value: /data/logs
+      - key: MAX_UPLOAD_MB
+        value: "100"
       - key: TELEGRAM_BOT_TOKEN
         sync: false
       - key: TELEGRAM_DEFAULT_CHANNEL
         value: "@kalibr_books"
-      - key: GEMINI_API_KEY
-        sync: false
-      - key: GEMINI_MODEL
-        value: gemini-2.5-flash-image
+    disk:
+      name: kalibr-publisher-data
+      mountPath: /data
+      sizeGB: 10
 
   - type: web
     name: kalibr-books-web
     runtime: docker
     dockerfilePath: ./apps/web/Dockerfile
     dockerContext: .
-    dockerfileTarget: production
     plan: starter
-    region: frankfurt
+    region: oregon
     healthCheckPath: /api/health
-    port: 3000
     envVars:
+      - fromGroup: kalibr-publisher-shared
+      - key: PORT
+        value: "10000"
       - key: NODE_ENV
         value: production
       - key: NEXT_PUBLIC_APP_NAME
-        value: Kalibr Books Publisher
+        value: Kalibr Publisher
       - key: NEXT_PUBLIC_DEFAULT_LOCALE
         value: uz
-      # Web talks to the API through its public URL.
       - key: API_INTERNAL_URL
-        value: https://kalibr-books-api.onrender.com
+        fromService:
+          type: web
+          name: kalibr-books-api
+          property: hostport
+      - key: ADMIN_BASIC_USERNAME
+        value: admin
+      - key: ADMIN_BASIC_PASSWORD
+        sync: false

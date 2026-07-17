@@ -11,7 +11,7 @@ const contentSecurityPolicy = [
   "font-src 'self' data:",
   "style-src 'self' 'unsafe-inline'",
   "script-src 'self' 'unsafe-inline'",
-  "connect-src 'self' https://kalibr-publisher-api.onrender.com http://127.0.0.1:8000 http://localhost:8000 ws:",
+  "connect-src 'self' ws: wss:",
 ].join("; ");
 
 const nextConfig: NextConfig = {
@@ -19,9 +19,7 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
   typedRoutes: true,
-  experimental: {
-    optimizePackageImports: ["lucide-react"],
-  },
+  experimental: { optimizePackageImports: ["lucide-react"] },
   async headers() {
     return [
       {

@@ -2,37 +2,41 @@
 
 ```text
 kalibr-publisher/
-├── .github/workflows/          Continuous-integration pipelines
+├── .github/workflows/              CI pipelines
 ├── apps/
-│   ├── api/                    FastAPI service
+│   ├── api/
 │   │   ├── src/kalibr_publisher/
-│   │   │   ├── api/            HTTP routing
-│   │   │   ├── core/           Configuration, logging, middleware and runtime checks
-│   │   │   ├── schemas/        Typed API response models
-│   │   │   └── main.py         Application factory and lifespan
-│   │   ├── tests/              API unit and integration tests
-│   │   ├── Dockerfile          Development and production API image
-│   │   ├── pyproject.toml      Python dependencies and quality-tool configuration
-│   │   └── uv.lock             Reproducible Python dependency lock
-│   └── web/                    Next.js application
-│       ├── app/                App Router pages and route handlers
-│       ├── components/         Reusable application and UI components
-│       ├── lib/                API client, localization and shared helpers
-│       ├── messages/           Uzbek and Russian dictionaries
-│       ├── public/             Static public assets
-│       ├── Dockerfile          Development and production web image
-│       └── package.json        Frontend commands and dependencies
-├── infrastructure/caddy/       HTTPS and reverse-proxy configuration
-├── docs/                       Architecture, installation and operating guides
-├── backups/                    Runtime backup volume mount
-├── logs/                       Runtime log volume mount
-├── storage/                    Runtime uploaded-media volume mount
-├── tmp/                        Controlled runtime temporary workspace
-├── docker-compose.yml          Local development stack
-├── docker-compose.production.yml Standalone production stack
-├── Makefile                    Repeatable engineering and operations commands
-├── package.json                Monorepo workspace and shared dependency policy
-└── README.md                   Project entry point
+│   │   │   ├── api/                Dependencies and HTTP routes
+│   │   │   ├── core/               Settings, errors, logging, middleware, runtime and JSON store
+│   │   │   ├── integrations/       Telegram Bot API client
+│   │   │   ├── schemas/            Pydantic request and response models
+│   │   │   ├── services/           Scheduler and publishing orchestration
+│   │   │   └── main.py             FastAPI application factory
+│   │   ├── tests/                  Unit, API, scheduler and Telegram tests
+│   │   ├── docker-entrypoint.py    Mounted-directory preparation and privilege drop
+│   │   ├── Dockerfile              Development and production API image
+│   │   ├── pyproject.toml          Python dependencies and quality configuration
+│   │   └── uv.lock                 Reproducible Python lock file
+│   └── web/
+│       ├── app/                    Next.js App Router pages and health route
+│       ├── components/             Dashboard, Telegram and scheduling UI
+│       ├── lib/                    Typed API client, localization and helpers
+│       ├── messages/               Uzbek and Russian dictionaries
+│       ├── public/                 Static assets
+│       ├── proxy.ts                Basic Auth, locale routing and API gateway
+│       ├── Dockerfile              Development and standalone production image
+│       └── package.json            Frontend dependencies and commands
+├── infrastructure/caddy/           VPS TLS and reverse proxy
+├── docs/                           Architecture and operating documentation
+├── backups/                        Non-Docker/local backup directory
+├── logs/                           Non-Docker/local log directory
+├── tmp/                            Non-Docker/local temporary directory
+├── docker-compose.yml              Docker development stack
+├── docker-compose.production.yml   VPS production stack
+├── render.yaml                     Render Blueprint
+├── Makefile                        Engineering and operations commands
+├── package.json                    npm workspace root
+└── README.md                       Project entry point
 ```
 
-Generated or machine-local directories such as `node_modules`, `.venv`, `.next`, cache directories, coverage data and `.env` are excluded from source archives and version control.
+Generated directories such as `node_modules`, `.venv`, `.next`, cache directories, coverage files, and `.env` are excluded from release archives and version control.

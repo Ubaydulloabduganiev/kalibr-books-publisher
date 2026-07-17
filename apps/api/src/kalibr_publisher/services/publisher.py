@@ -1,114 +1,142 @@
-"""Post publishing orchestrator.
-
-Ties together: AI caption rewrite/translate, optional time/order suggestions,
-and the actual Telegram send (text or media album).
-"""
+"""Manual Telegram post publishing orchestrator."""
 
 from __future__ import annotations
 
-import os
-from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 
 import structlog
 
-from kalibr_publisher.core.config import get_settings
+from kalibr_publisher.core.config import Settings, get_settings
 from kalibr_publisher.core.errors import ApiError
-from kalibr_publisher.core.store import MediaRef, Post, advance_recurring, update_post
-from kalibr_publisher.integrations.gemini import GeminiClient
+from kalibr_publisher.core.store import Post, advance_recurring, claim_post, update_post
 from kalibr_publisher.integrations.telegram import TelegramClient
 
 logger = structlog.get_logger(__name__)
 
 
-async def publish_post(post: Post, *, settings=None, tg_client=None, gemini_client=None) -> dict[str, Any]:
-    """Run AI + send the post to Telegram. Returns a result dict.
+def _resolve_media_path(settings: Settings, stored_path: str) -> Path:
+    candidate = Path(stored_path)
+    if not candidate.is_absolute():
+        candidate = settings.storage_root / candidate
+    resolved = candidate.resolve()
+    storage_root = settings.storage_root.resolve()
+    if resolved != storage_root and storage_root not in resolved.parents:
+        raise ApiError(
+            status_code=400,
+            code="invalid_media_path",
+            message="A post references media outside the managed storage directory.",
+            recovery_suggestion="Remove the media and upload it again through the media library.",
+        )
+    if not resolved.is_file():
+        raise ApiError(
+            status_code=409,
+            code="media_missing",
+            message="A media file required by this post is missing.",
+            recovery_suggestion="Restore the media file or replace it before publishing.",
+        )
+    return resolved
 
-    Steps:
-      1. If AI enabled and post.ai.rewrite -> rewrite/translate caption via Gemini.
-      2. Build media list (photos/videos) from post.media paths.
-      3. Send via Telegram (album if media present, else text message).
-      4. Update post status (sent / advance recurring / failed).
-    """
-    settings = settings or get_settings()
-    target = post.target or settings.telegram_default_channel
-    caption = post.text
-    parse_mode = post.parse_mode
 
-    # 1) AI caption rewrite
-    if getattr(settings, "ai_enabled", True) and post.ai.rewrite:
-        try:
-            g = gemini_client or GeminiClient(settings=settings)
-            res = g.rewrite_caption(post.text, language=post.ai.language or settings.ai_caption_language)
-            caption = res.text
-            parse_mode = res.parse_mode or parse_mode
-            logger.info("ai_caption_rewritten", post_id=post.id)
-        except ApiError as ex:
-            logger.warning("ai_rewrite_failed_fallback", post_id=post.id, error=ex.message)
-            # fall back to original text
+def _mark_failure(post: Post, exc: ApiError) -> dict[str, Any]:
+    post.status = "delivery_uncertain" if exc.code == "telegram_delivery_uncertain" else "failed"
+    post.last_error = exc.message
+    update_post(post)
+    logger.error("publish_failed", post_id=post.id, code=exc.code, status=post.status)
+    return {"ok": False, "post_id": post.id, "error": exc.message, "status": post.status}
 
-    # 2) media
-    media_items = []
-    missing = []
-    for m in post.media:
-        if os.path.exists(m.path):
-            media_items.append({"kind": m.kind, "path": m.path})
-        else:
-            missing.append(m.path)
-    if missing:
-        logger.warning("media_missing", post_id=post.id, missing=missing)
 
-    # 3) send
-    tg = tg_client or TelegramClient(settings)
+async def publish_post(
+    post: Post,
+    *,
+    settings: Settings | None = None,
+    tg_client: TelegramClient | None = None,
+) -> dict[str, Any]:
+    """Publish the exact text and media supplied by the marketing team."""
+    resolved_settings = settings or get_settings()
+    if post.status == "pending":
+        claimed = claim_post(post.id)
+        if claimed is None:
+            return {
+                "ok": False,
+                "post_id": post.id,
+                "error": "The post is no longer pending.",
+                "status": "skipped",
+            }
+        post = claimed
+    elif post.status != "publishing":
+        return {
+            "ok": False,
+            "post_id": post.id,
+            "error": "The post is not in a publishable state.",
+            "status": "skipped",
+        }
+
+    target = post.target or resolved_settings.telegram_default_channel
+    telegram = tg_client or TelegramClient(resolved_settings)
+
     try:
-        if media_items:
-            if len(media_items) == 1:
-                m = media_items[0]
-                if m["kind"] == "photo":
-                    result = await tg.send_photo(m["path"], caption=caption, chat_id=target, parse_mode=parse_mode)
-                else:
-                    result = await tg.send_video(m["path"], caption=caption, chat_id=target, parse_mode=parse_mode)
-            else:
-                result = await tg.send_album(media_items, chat_id=target, caption=caption, parse_mode=parse_mode)
+        media = [
+            {"kind": item.kind, "path": str(_resolve_media_path(resolved_settings, item.path))}
+            for item in post.media
+        ]
+        if len(media) == 1:
+            item = media[0]
+            senders = {
+                "photo": telegram.send_photo,
+                "video": telegram.send_video,
+                "animation": telegram.send_animation,
+                "document": telegram.send_document,
+            }
+            sender = senders.get(item["kind"])
+            if sender is None:
+                raise ApiError(
+                    status_code=400,
+                    code="unsupported_media_kind",
+                    message="The post contains an unsupported media type.",
+                    recovery_suggestion="Remove the media and upload a supported file.",
+                )
+            result = await sender(
+                item["path"], caption=post.text, chat_id=target, parse_mode=post.parse_mode
+            )
+        elif media:
+            if any(item["kind"] not in {"photo", "video"} for item in media):
+                raise ApiError(
+                    status_code=400,
+                    code="unsupported_album_media",
+                    message="Telegram albums can contain only photos and videos.",
+                    recovery_suggestion="Publish documents and GIF animations as separate posts.",
+                )
+            result = await telegram.send_album(
+                media, chat_id=target, caption=post.text, parse_mode=post.parse_mode
+            )
         else:
-            result = await tg.send_message(caption, chat_id=target, parse_mode=parse_mode)
-    except ApiError as ex:
-        post.status = "failed"
-        post.last_error = ex.message
-        update_post(post)
-        logger.error("publish_failed", post_id=post.id, error=ex.message)
-        return {"ok": False, "post_id": post.id, "error": ex.message}
+            result = await telegram.send_message(
+                post.text, chat_id=target, parse_mode=post.parse_mode
+            )
+    except ApiError as exc:
+        return _mark_failure(post, exc)
+    except Exception as exc:
+        logger.exception(
+            "publish_unexpected_failure", post_id=post.id, exception_type=type(exc).__name__
+        )
+        return _mark_failure(
+            post,
+            ApiError(
+                status_code=500,
+                code="publisher_internal_error",
+                message="The post could not be published because of an internal error.",
+                recovery_suggestion="Inspect the server logs before retrying the post.",
+            ),
+        )
 
-    # 4) mark sent / advance
-    # advance_recurring owns status: non-recurring -> "sent", recurring -> "pending"
     advance_recurring(post)
-    if post.status == "sent":
-        post.sent_at = datetime.now(timezone.utc).isoformat()
     post.last_error = None
     update_post(post)
-    logger.info("publish_ok", post_id=post.id, message_id=result.message_id)
-    return {"ok": True, "post_id": post.id, "chat_id": result.chat_id, "message_id": result.message_id}
-
-
-def order_posts_with_ai(posts: list[Post], gemini_client: GeminiClient | None = None) -> list[Post]:
-    """Return posts reordered by AI suggestion (if enabled)."""
-    if not posts:
-        return posts
-    settings = get_settings()
-    if not getattr(settings, "ai_enabled", True):
-        return posts
-    any_order = any(p.ai.choose_order for p in posts)
-    if not any_order:
-        return posts
-    try:
-        g = gemini_client or GeminiClient(settings=settings)
-        briefs = [{"text": p.text} for p in posts]
-        order = g.choose_order(briefs)
-        ordered = [posts[i] for i in order if 0 <= i < len(posts)]
-        # append any not returned
-        seen = set(order)
-        ordered += [p for i, p in enumerate(posts) if i not in seen]
-        return ordered
-    except ApiError as ex:
-        logger.warning("ai_order_failed", error=ex.message)
-        return posts
+    logger.info("publish_succeeded", post_id=post.id, message_id=result.message_id)
+    return {
+        "ok": True,
+        "post_id": post.id,
+        "chat_id": result.chat_id,
+        "message_id": result.message_id,
+    }

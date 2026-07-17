@@ -5,6 +5,12 @@ from httpx import AsyncClient
 from kalibr_publisher.core.config import Settings
 
 
+async def test_root_explains_health_endpoint(client: AsyncClient) -> None:
+    response = await client.get("/")
+    assert response.status_code == 200
+    assert response.json()["health"] == "/api/v1/health/ready"
+
+
 async def test_liveness(client: AsyncClient) -> None:
     response = await client.get("/api/v1/health/live")
 
@@ -23,9 +29,10 @@ async def test_readiness_checks_every_runtime_directory(client: AsyncClient) -> 
     assert response.status_code == 200
     body = response.json()
     assert body["status"] == "ok"
-    assert set(body["checks"]) == {"storage", "backups", "temporary", "logs"}
+    assert set(body["checks"]) == {"storage", "media", "backups", "temporary", "logs"}
     assert all(check["status"] == "pass" for check in body["checks"].values())
     assert all(check["details"]["free_bytes"] > 0 for check in body["checks"].values())
+    assert all("path" not in check["details"] for check in body["checks"].values())
 
 
 async def test_valid_request_id_is_preserved(client: AsyncClient) -> None:
@@ -73,6 +80,11 @@ async def test_readiness_reports_unwritable_runtime_path(
     settings: Settings,
 ) -> None:
     storage_root = settings.storage_root
+    for item in storage_root.iterdir():
+        if item.is_dir():
+            item.rmdir()
+        else:
+            item.unlink()
     storage_root.rmdir()
     storage_root.write_text("not a directory", encoding="utf-8")
 
@@ -81,3 +93,19 @@ async def test_readiness_reports_unwritable_runtime_path(
     assert response.status_code == 503
     assert response.json()["status"] == "degraded"
     assert response.json()["checks"]["storage"]["status"] == "fail"
+
+
+async def test_corrupt_post_store_prevents_application_startup(
+    settings: Settings,
+) -> None:
+    import pytest
+
+    from kalibr_publisher.main import create_app
+
+    settings.storage_root.mkdir(parents=True, exist_ok=True)
+    (settings.storage_root / "posts.json").write_text("not-json", encoding="utf-8")
+    app = create_app(settings)
+
+    with pytest.raises(RuntimeError, match="corrupted"):
+        async with app.router.lifespan_context(app):
+            pass
