@@ -81,4 +81,22 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     return application
 
 
-app = create_app()
+try:
+    app = create_app()
+except Exception as _boot_err:  # pragma: no cover - defensive boot guard
+    import traceback
+
+    _tb = traceback.format_exc()
+    print("BOOT_FAILURE:\n" + _tb, flush=True)
+
+    from fastapi import FastAPI as _F
+
+    app = _F()
+
+    @app.get("/api/v1/health/live")
+    async def _boot_health():
+        return {"status": "boot_failed", "error": _tb}
+
+    @app.get("/api/v1/meta")
+    async def _boot_meta():
+        return {"status": "boot_failed", "error": _tb}
