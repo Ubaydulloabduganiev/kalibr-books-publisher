@@ -86,11 +86,11 @@ class Settings(BaseSettings):
         default=None, validation_alias="GEMINI_API_KEY"
     )
     gemini_model: str = Field(
-        default="gemini-2.0-flash-preview-image-generation",
+        default="gemini-2.5-flash-image",
         validation_alias="GEMINI_MODEL",
     )
     gemini_text_model: str = Field(
-        default="gemini-1.5-flash", validation_alias="GEMINI_TEXT_MODEL"
+        default="gemini-2.5-flash", validation_alias="GEMINI_TEXT_MODEL"
     )
     ai_caption_language: str = Field(default="uz", validation_alias="AI_CAPTION_LANGUAGE")
     ai_enabled: bool = Field(default=True, validation_alias="AI_ENABLED")
