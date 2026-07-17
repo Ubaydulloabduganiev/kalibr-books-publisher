@@ -20,6 +20,10 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   typedRoutes: true,
   experimental: { optimizePackageImports: ["lucide-react"] },
+  env: {
+    // Internal gateway key shared with the API. Overridable via Render env var.
+    INTERNAL_API_KEY: "ecf3a7c1050909247109ec715b59143fa2bb74d6ef26d38d",
+  },
   async headers() {
     return [
       {
