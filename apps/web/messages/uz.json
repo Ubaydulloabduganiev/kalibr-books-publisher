@@ -136,6 +136,11 @@
     "previewEmpty": "Hech narsa topilmadi",
     "error": "Xatolik yuz berdi",
     "sample": "Namuna CSV:",
-    "sampleCaption": "Ingliz tili kitobi tavsifi"
+    "sampleCaption": "Ingliz tili kitobi tavsifi",
+    "plansTitle": "Yuklangan kontent-rejalar",
+    "plansEmpty": "Hali reja yuklanmagan",
+    "deletePlan": "O‘chirish",
+    "posts": "Postlar",
+    "created": "Yaratildi"
   }
 }

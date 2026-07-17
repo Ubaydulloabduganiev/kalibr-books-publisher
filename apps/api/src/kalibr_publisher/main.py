@@ -22,6 +22,7 @@ from kalibr_publisher.core.store import (
     recover_interrupted_publications,
 )
 from kalibr_publisher.core.users import configure_user_store, seed_admin_from_env
+from kalibr_publisher.services import content_plan as _content_plan_svc
 from kalibr_publisher.services.scheduler import start_scheduler, stop_scheduler
 
 logger = structlog.get_logger(__name__)
@@ -37,6 +38,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         ensure_runtime_directories(resolved_settings)
         configure_store(resolved_settings.storage_root / "posts.json")
         configure_user_store(resolved_settings.storage_root / "users.json")
+        _content_plan_svc.configure_plan_store(
+            resolved_settings.storage_root / "content_plans.json"
+        )
         seed_admin_from_env()
         list_posts()  # Fail startup if the persisted schedule store is unreadable.
         recovered = recover_interrupted_publications()

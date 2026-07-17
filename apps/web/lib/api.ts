@@ -413,3 +413,53 @@ export async function uploadContentPlan(
     return { ok: false, error: error instanceof Error ? error.message : "Unknown API error" };
   }
 }
+
+export interface ContentPlanItem {
+  row: number;
+  text: string;
+  image_prompt: string;
+  schedule: string;
+  post_id: string | null;
+  caption: string | null;
+  media_count: number;
+}
+
+export interface ContentPlan {
+  id: string;
+  filename: string;
+  created_at: string;
+  post_count: number;
+  items: ContentPlanItem[];
+}
+
+export async function listContentPlans(): Promise<{ ok: boolean; data?: ContentPlan[]; error?: string }> {
+  try {
+    const response = await fetch(`${apiBaseUrl}/api/v1/content-plan`, {
+      method: "GET",
+      cache: "no-store",
+      headers: { Accept: "application/json" },
+    });
+    if (!response.ok) {
+      return { ok: false, error: await readApiError(response, "Failed to load plans") };
+    }
+    const data = (await response.json()) as { count: number; plans: ContentPlan[] };
+    return { ok: true, data: data.plans };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "Unknown API error" };
+  }
+}
+
+export async function deleteContentPlan(id: string): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const response = await fetch(`${apiBaseUrl}/api/v1/content-plan/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+      cache: "no-store",
+    });
+    if (!response.ok) {
+      return { ok: false, error: await readApiError(response, "Failed to delete plan") };
+    }
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "Unknown API error" };
+  }
+}

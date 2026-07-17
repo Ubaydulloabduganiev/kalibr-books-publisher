@@ -66,6 +66,7 @@ class Schedule:
 @dataclass(slots=True)
 class PostDraft:
     text: str
+    index: int = 0
     media: list[MediaRef] = field(default_factory=list)
     target: str | None = None
     parse_mode: str | None = None

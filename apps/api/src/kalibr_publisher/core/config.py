@@ -94,6 +94,7 @@ class Settings(BaseSettings):
     )
     ai_caption_language: str = Field(default="uz", validation_alias="AI_CAPTION_LANGUAGE")
     ai_enabled: bool = Field(default=True, validation_alias="AI_ENABLED")
+    ai_generate_images: bool = Field(default=False, validation_alias="AI_GENERATE_IMAGES")
 
     @field_validator("api_v1_prefix")
     @classmethod
