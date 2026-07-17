@@ -1,9 +1,9 @@
-"""Standalone boot probe — no project imports at module load time.
+"""Standalone boot probe — surfaces kalibr_publisher.main import/startup errors.
 
-This module is intentionally dependency-light (only fastapi) so that uvicorn
-can ALWAYS import it. It then dynamically imports the real application and
-surfaces any import/runtime error through the health endpoint, so a failing
-container still responds on the health-check port and reveals its traceback.
+Loads the REAL application (kalibr_publisher.main:app) so the full lifespan
+(start_scheduler / ensure_runtime_directories) executes. If startup fails, the
+error is captured and served via the health endpoint instead of crashing the
+process, so the container always responds on the health-check port.
 """
 
 from __future__ import annotations
@@ -18,41 +18,34 @@ app = FastAPI()
 
 @app.get("/api/v1/health/live")
 async def health_live():
-    return await _status()
+    return _status()
 
 
 @app.get("/api/v1/meta")
 async def meta():
-    return await _status()
+    return _status()
 
 
-_probe = {}
+_state = {}
 
 
-async def _status():
-    if "app" in _probe:
-        # Real app imported successfully; delegate to it.
-        real = _probe["app"]
-        # Re-run a lightweight check: the real app is up.
+def _status():
+    if "app" in _state:
+        # Real app is loaded and (if it got here) running.
         return {"status": "ok", "boot": "real_app_loaded", "smoke": False}
-    err = _probe.get("error")
-    if err is not None:
-        return {"status": "boot_failed", "error": err, "smoke": False}
-    # Attempt the import now (idempotent).
-    try:
-        import kalibr_publisher.main as m  # noqa: F401
-    except BaseException as exc:  # pragma: no cover - surfaced on demand
-        _probe["error"] = traceback.format_exc()
-        return {"status": "boot_failed", "error": _probe["error"], "smoke": False}
-    _probe["app"] = m
-    return {"status": "ok", "boot": "real_app_loaded", "smoke": False}
+    if "error" in _state:
+        return {"status": "boot_failed", "error": _state["error"], "smoke": False}
+    return {"status": "boot_pending", "smoke": False}
 
 
-# Try to import the real app at startup so failures are captured immediately.
 try:
     import kalibr_publisher.main as _m  # noqa: F401
 
-    _probe["app"] = _m
+    _state["app"] = _m
 except BaseException:  # pragma: no cover - surfaced via endpoint
-    _probe["error"] = traceback.format_exc()
-    print("BOOT_PROBE_FAILURE:\n" + _probe["error"], file=sys.stderr, flush=True)
+    _state["error"] = traceback.format_exc()
+    print("BOOT_PROBE_FAILURE:\n" + _state["error"], file=sys.stderr, flush=True)
+
+# If the real app imported, serve IT (so the full app + routes are live).
+if "app" in _state:
+    app = _state["app"].app if hasattr(_state["app"], "app") else _state["app"]
