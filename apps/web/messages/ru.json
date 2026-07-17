@@ -7,7 +7,8 @@
     "dashboard": "Панель управления",
     "system": "Состояние системы",
     "publisher": "Telegram",
-    "users": "Аккаунты"
+    "users": "Аккаунты",
+    "contentPlan": "Контент-план"
   },
   "common": {
     "online": "Работает",
@@ -117,5 +118,24 @@
     "passwordTooShort": "Пароль должен содержать минимум 8 символов.",
     "error": "Произошла ошибка. Попробуйте снова.",
     "confirmDelete": "Удалить пользователя {username}?"
+  },
+  "contentPlan": {
+    "title": "Контент-план",
+    "description": "Загрузите CSV-план — ИИ сгенерирует текст и изображение и отправит в Telegram по расписанию.",
+    "dropCsv": "Перетащите CSV-файл сюда (колонки: text, image_prompt, schedule)",
+    "chooseFile": "Выбрать файл",
+    "preview": "Предпросмотр",
+    "generateSchedule": "Сгенерировать и запланировать",
+    "previewing": "Загрузка...",
+    "generating": "Генерация...",
+    "row": "Строка",
+    "text": "Текст",
+    "imagePrompt": "Промпт изображения",
+    "schedule": "Расписание",
+    "createdCount": "Запланировано постов: {n}",
+    "previewEmpty": "Ничего не найдено",
+    "error": "Произошла ошибка",
+    "sample": "Пример CSV:",
+    "sampleCaption": "Описание книги по английскому"
   }
 }

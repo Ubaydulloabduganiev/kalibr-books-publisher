@@ -7,7 +7,8 @@
     "dashboard": "Boshqaruv paneli",
     "system": "Tizim holati",
     "publisher": "Telegram",
-    "users": "Akkountlar"
+    "users": "Akkountlar",
+    "contentPlan": "Kontent-reja"
   },
   "common": {
     "online": "Ishlamoqda",
@@ -117,5 +118,24 @@
     "passwordTooShort": "Parol kamida 8 ta belgidan iborat bo'lishi kerak.",
     "error": "Xatolik yuz berdi. Qayta urinib ko'ring.",
     "confirmDelete": "{username} foydalanuvchisini o'chirishni tasdiqlaysizmi?"
+  },
+  "contentPlan": {
+    "title": "Kontent-reja",
+    "description": "CSV rejani yuklang — AI matn va rasm generatsiya qiladi va Telegramga rejali jo‘natadi.",
+    "dropCsv": "CSV faylini shu yerga tashlang (ustunlar: text, image_prompt, schedule)",
+    "chooseFile": "Fayl tanlash",
+    "preview": "Oldindan ko‘rish",
+    "generateSchedule": "Generatsiya qilish va rejalashtirish",
+    "previewing": "Yuklanmoqda...",
+    "generating": "Generatsiya qilinmoqda...",
+    "row": "Qator",
+    "text": "Matn",
+    "imagePrompt": "Rasm prompti",
+    "schedule": "Reja",
+    "createdCount": "{n} ta post rejaga qo‘yildi",
+    "previewEmpty": "Hech narsa topilmadi",
+    "error": "Xatolik yuz berdi",
+    "sample": "Namuna CSV:",
+    "sampleCaption": "Ingliz tili kitobi tavsifi"
   }
 }

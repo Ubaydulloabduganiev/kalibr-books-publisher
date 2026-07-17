@@ -1,4 +1,4 @@
-import { Activity, LayoutDashboard, Users } from "lucide-react";
+import { Activity, FileText, LayoutDashboard, Users } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
@@ -18,6 +18,7 @@ export function AppShell({
 }) {
   const links = [
     { href: `/${locale}`, label: messages.nav.dashboard, icon: LayoutDashboard },
+    { href: `/${locale}/content-plan`, label: messages.nav.contentPlan, icon: FileText },
     { href: `/${locale}/system`, label: messages.nav.system, icon: Activity },
     { href: `/${locale}/users`, label: messages.nav.users, icon: Users },
   ] as const;

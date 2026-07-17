@@ -13,6 +13,7 @@ export function MobileNavigation({ locale, messages }: { locale: Locale; message
   const pathname = usePathname();
   const links = [
     { href: `/${locale}`, label: messages.nav.dashboard },
+    { href: `/${locale}/content-plan`, label: messages.nav.contentPlan },
     { href: `/${locale}/system`, label: messages.nav.system },
     { href: `/${locale}/users`, label: messages.nav.users },
   ] as const;

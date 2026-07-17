@@ -82,6 +82,19 @@ class Settings(BaseSettings):
         default=None, validation_alias="TELEGRAM_DEFAULT_CHANNEL"
     )
 
+    gemini_api_key: SecretStr | None = Field(
+        default=None, validation_alias="GEMINI_API_KEY"
+    )
+    gemini_model: str = Field(
+        default="gemini-2.0-flash-preview-image-generation",
+        validation_alias="GEMINI_MODEL",
+    )
+    gemini_text_model: str = Field(
+        default="gemini-1.5-flash", validation_alias="GEMINI_TEXT_MODEL"
+    )
+    ai_caption_language: str = Field(default="uz", validation_alias="AI_CAPTION_LANGUAGE")
+    ai_enabled: bool = Field(default=True, validation_alias="AI_ENABLED")
+
     @field_validator("api_v1_prefix")
     @classmethod
     def validate_api_prefix(cls, value: str) -> str:

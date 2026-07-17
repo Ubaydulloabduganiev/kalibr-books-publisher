@@ -361,3 +361,55 @@ export async function deletePost(id: string): Promise<{ ok: boolean; error?: str
     return { ok: false, error: error instanceof Error ? error.message : "Unknown API error" };
   }
 }
+
+export interface ContentPlanPreviewItem {
+  row: number;
+  text: string;
+  image_prompt: string;
+  schedule: string;
+}
+
+export interface ContentPlanPreview {
+  count: number;
+  items: ContentPlanPreviewItem[];
+}
+
+export async function previewContentPlan(
+  file: File,
+): Promise<{ ok: boolean; data?: ContentPlanPreview; error?: string }> {
+  try {
+    const form = new FormData();
+    form.append("file", file);
+    const response = await fetch(`${apiBaseUrl}/api/v1/content-plan/preview`, {
+      method: "POST",
+      cache: "no-store",
+      body: form,
+    });
+    if (!response.ok) {
+      return { ok: false, error: await readApiError(response, "Preview failed") };
+    }
+    return { ok: true, data: (await response.json()) as ContentPlanPreview };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "Unknown API error" };
+  }
+}
+
+export async function uploadContentPlan(
+  file: File,
+): Promise<{ ok: boolean; data?: { count: number; items: unknown[] }; error?: string }> {
+  try {
+    const form = new FormData();
+    form.append("file", file);
+    const response = await fetch(`${apiBaseUrl}/api/v1/content-plan/upload`, {
+      method: "POST",
+      cache: "no-store",
+      body: form,
+    });
+    if (!response.ok) {
+      return { ok: false, error: await readApiError(response, "Upload failed") };
+    }
+    return { ok: true, data: (await response.json()) as { count: number; items: unknown[] } };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "Unknown API error" };
+  }
+}
