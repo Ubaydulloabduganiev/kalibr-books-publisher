@@ -96,10 +96,10 @@ class Settings(BaseSettings):
         validation_alias="API_REQUEST_ID_HEADER",
     )
 
-    storage_root: Path = Field(default=Path("/data/storage"), validation_alias="STORAGE_ROOT")
-    backup_root: Path = Field(default=Path("/data/backups"), validation_alias="BACKUP_ROOT")
-    temp_root: Path = Field(default=Path("/data/tmp"), validation_alias="TEMP_ROOT")
-    log_root: Path = Field(default=Path("/data/logs"), validation_alias="LOG_ROOT")
+    storage_root: Path = Field(default=Path("/app/data/storage"), validation_alias="STORAGE_ROOT")
+    backup_root: Path = Field(default=Path("/app/data/backups"), validation_alias="BACKUP_ROOT")
+    temp_root: Path = Field(default=Path("/app/data/tmp"), validation_alias="TEMP_ROOT")
+    log_root: Path = Field(default=Path("/app/data/logs"), validation_alias="LOG_ROOT")
 
     @field_validator("api_v1_prefix")
     @classmethod
