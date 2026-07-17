@@ -6,7 +6,8 @@
   "nav": {
     "dashboard": "Boshqaruv paneli",
     "system": "Tizim holati",
-    "publisher": "Telegram"
+    "publisher": "Telegram",
+    "users": "Akkountlar"
   },
   "common": {
     "online": "Ishlamoqda",
@@ -87,5 +88,34 @@
     "sendNow": "Hozir yuborish",
     "scheduleRequired": "Bir martalik post uchun sana va vaqtni tanlang.",
     "uncertainConfirmation": "Telegram kanalini tekshirdingizmi? Qayta yuborish dublikat post yaratishi mumkin."
+  },
+  "users": {
+    "title": "Hisoblar",
+    "description": "Administratorlar foydalanuvchi hisoblarini yaratishi va parollarni boshqarishi mumkin.",
+    "createTitle": "Yangi hisob yaratish",
+    "createDescription": "Telegram kanaliga chop etish huquqiga ega editor yoki administrator qo'shing.",
+    "username": "Foydalanuvchi nomi",
+    "usernamePlaceholder": "masalan, editor1",
+    "displayName": "To'liq ism",
+    "displayNamePlaceholder": "masalan, Anvar Karimov",
+    "password": "Parol",
+    "passwordPlaceholder": "Kamida 8 ta belgi",
+    "role": "Rol",
+    "roleEditor": "Editor",
+    "roleAdmin": "Administrator",
+    "createButton": "Hisob yaratish",
+    "listTitle": "Mavjud hisoblar",
+    "listDescription": "Hisoblar ro'yxati, parolni almashtirish yoki o'chirish.",
+    "empty": "Hozircha hisoblar yo'q.",
+    "changePassword": "Parolni almashtirish",
+    "newPasswordPlaceholder": "Yangi parol (kamida 8 ta belgi)",
+    "savePassword": "Saqlash",
+    "cancel": "Bekor qilish",
+    "delete": "O'chirish",
+    "created": "Hisob yaratildi.",
+    "passwordChanged": "Parol yangilandi.",
+    "passwordTooShort": "Parol kamida 8 ta belgidan iborat bo'lishi kerak.",
+    "error": "Xatolik yuz berdi. Qayta urinib ko'ring.",
+    "confirmDelete": "{username} foydalanuvchisini o'chirishni tasdiqlaysizmi?"
   }
 }

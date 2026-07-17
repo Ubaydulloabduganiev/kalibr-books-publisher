@@ -6,7 +6,8 @@
   "nav": {
     "dashboard": "Панель управления",
     "system": "Состояние системы",
-    "publisher": "Telegram"
+    "publisher": "Telegram",
+    "users": "Аккаунты"
   },
   "common": {
     "online": "Работает",
@@ -87,5 +88,34 @@
     "sendNow": "Отправить сейчас",
     "scheduleRequired": "Для разовой публикации выберите дату и время.",
     "uncertainConfirmation": "Вы проверили канал Telegram? Повторная отправка может создать дубликат."
+  },
+  "users": {
+    "title": "Аккаунты",
+    "description": "Администраторы могут создавать пользователей и управлять паролями.",
+    "createTitle": "Создать аккаунт",
+    "createDescription": "Добавьте редактора или администратора с правом публикации в Telegram-канал.",
+    "username": "Имя пользователя",
+    "usernamePlaceholder": "например, editor1",
+    "displayName": "Полное имя",
+    "displayNamePlaceholder": "например, Анвар Каримов",
+    "password": "Пароль",
+    "passwordPlaceholder": "Минимум 8 символов",
+    "role": "Роль",
+    "roleEditor": "Редактор",
+    "roleAdmin": "Администратор",
+    "createButton": "Создать аккаунт",
+    "listTitle": "Существующие аккаунты",
+    "listDescription": "Список аккаунтов, смена пароля или удаление.",
+    "empty": "Пока нет аккаунтов.",
+    "changePassword": "Сменить пароль",
+    "newPasswordPlaceholder": "Новый пароль (минимум 8 символов)",
+    "savePassword": "Сохранить",
+    "cancel": "Отмена",
+    "delete": "Удалить",
+    "created": "Аккаунт создан.",
+    "passwordChanged": "Пароль обновлён.",
+    "passwordTooShort": "Пароль должен содержать минимум 8 символов.",
+    "error": "Произошла ошибка. Попробуйте снова.",
+    "confirmDelete": "Удалить пользователя {username}?"
   }
 }

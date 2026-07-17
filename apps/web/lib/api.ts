@@ -261,6 +261,92 @@ export async function schedulePost(
   }
 }
 
+export interface UserOut {
+  id: string;
+  username: string;
+  display_name: string;
+  role: "admin" | "editor";
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UserList {
+  count: number;
+  users: UserOut[];
+}
+
+export async function listUsers(): Promise<{ ok: boolean; data?: UserList; error?: string }> {
+  try {
+    const response = await fetch(`${apiBaseUrl}/api/v1/users`, {
+      cache: "no-store",
+      headers: { Accept: "application/json" },
+    });
+    if (!response.ok) {
+      return { ok: false, error: await readApiError(response, "List failed") };
+    }
+    return { ok: true, data: (await response.json()) as UserList };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "Unknown API error" };
+  }
+}
+
+export async function createUser(payload: {
+  username: string;
+  password: string;
+  display_name?: string;
+  role: "admin" | "editor";
+}): Promise<{ ok: boolean; data?: UserOut; error?: string }> {
+  try {
+    const response = await fetch(`${apiBaseUrl}/api/v1/users`, {
+      method: "POST",
+      cache: "no-store",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (!response.ok) {
+      return { ok: false, error: await readApiError(response, "Create failed") };
+    }
+    return { ok: true, data: (await response.json()) as UserOut };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "Unknown API error" };
+  }
+}
+
+export async function changeUserPassword(
+  id: string,
+  new_password: string,
+): Promise<{ ok: boolean; data?: UserOut; error?: string }> {
+  try {
+    const response = await fetch(`${apiBaseUrl}/api/v1/users/${encodeURIComponent(id)}/password`, {
+      method: "POST",
+      cache: "no-store",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ new_password }),
+    });
+    if (!response.ok) {
+      return { ok: false, error: await readApiError(response, "Password change failed") };
+    }
+    return { ok: true, data: (await response.json()) as UserOut };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "Unknown API error" };
+  }
+}
+
+export async function deleteUser(id: string): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const response = await fetch(`${apiBaseUrl}/api/v1/users/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+      cache: "no-store",
+    });
+    if (!response.ok) {
+      return { ok: false, error: await readApiError(response, "Delete failed") };
+    }
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "Unknown API error" };
+  }
+}
+
 export async function deletePost(id: string): Promise<{ ok: boolean; error?: string }> {
   try {
     const response = await fetch(`${apiBaseUrl}/api/v1/posts/${encodeURIComponent(id)}`, {
