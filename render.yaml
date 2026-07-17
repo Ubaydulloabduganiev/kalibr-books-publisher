@@ -48,7 +48,6 @@ services:
         value: "100"
       - key: TELEGRAM_BOT_TOKEN
         value: "8776098917:AAH25Ae4t_kEXbMezemMG2fCku_pdoPJUeo"
-        sync: false
       - key: TELEGRAM_DEFAULT_CHANNEL
         value: "@kalibr_books"
     disk:
