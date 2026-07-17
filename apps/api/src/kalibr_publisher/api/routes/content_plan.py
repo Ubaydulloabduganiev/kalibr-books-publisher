@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import asdict
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi.responses import Response
 from pydantic import BaseModel
 
 from kalibr_publisher.api.deps import require_internal_api_key
@@ -16,6 +17,29 @@ router = APIRouter(
     tags=["content-plan"],
     dependencies=[Depends(require_internal_api_key)],
 )
+
+TEMPLATE_CSV = (
+    "text,image_prompt,schedule\r\n"
+    '"Learn English every day with Kalibr Books! Bugungi so\'z: consistency = izchillik.",'
+    '"a cozy desk with English books and a cup of tea, warm morning light",2026-07-20T09:00:00+05:00\r\n'
+    '"Daily vocabulary tip: book = kitob. Save this post and review it tonight.",'
+    '"colorful vocabulary flashcards on a wooden table",2026-07-20T13:00:00+05:00\r\n'
+    '"Grammar in 30 seconds: use since for a point in time, for for a duration.",'
+    '"minimalist chalkboard with grammar notes, clean design",2026-07-21T10:00:00+05:00\r\n'
+    '"Motivation Monday: reading 10 pages a day = 3650 pages a year. Start now!",'
+    '"open book with sunlight, inspirational cozy reading nook",EVERY 24h\r\n'
+    '"Weekly quiz! Comment your answer: What is the past tense of go?",'
+    '"quiz card with question mark, playful modern illustration",EVERY 168h\r\n'
+)
+
+
+@router.get("/template")
+async def download_template() -> Response:
+    return Response(
+        content=("\ufeff" + TEMPLATE_CSV).encode("utf-8"),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="content-plan-template.csv"'},
+    )
 
 
 class ContentPlanItemOut(BaseModel):

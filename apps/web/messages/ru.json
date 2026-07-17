@@ -146,6 +146,7 @@
     "originalText": "Исходный текст",
     "caption": "Подпись",
     "post": "Пост",
-    "noCaption": "Пока нет"
+    "noCaption": "Пока нет",
+    "downloadTemplate": "Скачать шаблон"
   }
 }

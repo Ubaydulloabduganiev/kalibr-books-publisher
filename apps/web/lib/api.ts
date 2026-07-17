@@ -468,6 +468,25 @@ export async function getContentPlan(
   }
 }
 
+export async function downloadContentPlanTemplate(): Promise<void> {
+  const response = await fetch(`${apiBaseUrl}/api/v1/content-plan/template`, {
+    method: "GET",
+    cache: "no-store",
+  });
+  if (!response.ok) {
+    throw new Error("Failed to download template");
+  }
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "content-plan-template.csv";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 export async function deleteContentPlan(id: string): Promise<{ ok: boolean; error?: string }> {
   try {
     const response = await fetch(`${apiBaseUrl}/api/v1/content-plan/${encodeURIComponent(id)}`, {

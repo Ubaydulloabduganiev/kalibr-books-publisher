@@ -146,6 +146,7 @@
     "originalText": "Asl matn",
     "caption": "Sarlavha",
     "post": "Post",
-    "noCaption": "Hali yo'q"
+    "noCaption": "Hali yo'q",
+    "downloadTemplate": "Shablonni yuklab olish"
   }
 }

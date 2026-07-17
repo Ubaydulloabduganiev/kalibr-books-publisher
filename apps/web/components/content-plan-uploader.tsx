@@ -1,11 +1,12 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { FileUp, Loader2, UploadCloud } from "lucide-react";
+import { Download, FileUp, Loader2, UploadCloud } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
+  downloadContentPlanTemplate,
   previewContentPlan,
   uploadContentPlan,
   type ContentPlanPreviewItem,
@@ -17,6 +18,7 @@ interface Messages {
     description: string;
     dropCsv: string;
     chooseFile: string;
+    downloadTemplate: string;
     preview: string;
     generateSchedule: string;
     previewing: string;
@@ -92,6 +94,10 @@ export function ContentPlanUploader({ messages }: { messages: Messages }) {
           <Button variant="outline" onClick={() => inputRef.current?.click()}>
             <FileUp className="mr-2 size-4" />
             {t.chooseFile}
+          </Button>
+          <Button variant="ghost" onClick={() => downloadContentPlanTemplate()}>
+            <Download className="mr-2 size-4" />
+            {t.downloadTemplate}
           </Button>
           {file && <p className="mt-2 text-sm">{file.name}</p>}
         </div>
