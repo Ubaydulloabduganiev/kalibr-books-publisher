@@ -34,4 +34,4 @@ FROM base AS production
 # Run as root so the app can create /data/* runtime dirs on Render's mounted disk.
 # Render forwards external traffic to its $PORT (10000). Listen on 10000 explicitly.
 EXPOSE 10000
-CMD ["uvicorn", "kalibr_publisher.boot_probe:app", "--host", "0.0.0.0", "--port", "10000", "--workers", "1", "--no-access-log", "--proxy-headers", "--forwarded-allow-ips", "*"]
+CMD ["uvicorn", "kalibr_publisher.main:app", "--host", "0.0.0.0", "--port", "10000", "--workers", "1", "--no-access-log", "--proxy-headers", "--forwarded-allow-ips", "*"]

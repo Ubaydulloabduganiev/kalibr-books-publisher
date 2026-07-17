@@ -31,21 +31,24 @@ try:
 
         @asynccontextmanager
         async def lifespan(_: FastAPI) -> AsyncIterator[None]:
-            ensure_runtime_directories(resolved_settings)
-            logger.info(
-                "application_started",
-                app_name=resolved_settings.app_name,
-                version=resolved_settings.app_version,
-                environment=resolved_settings.app_env,
-            )
-            scheduler_task = start_scheduler()
+            try:
+                ensure_runtime_directories(resolved_settings)
+                logger.info(
+                    "application_started",
+                    app_name=resolved_settings.app_name,
+                    version=resolved_settings.app_version,
+                    environment=resolved_settings.app_env,
+                )
+                scheduler_task = start_scheduler()
+            except BaseException as _life_err:  # pragma: no cover - startup must not crash
+                logger.error("lifespan_startup_error", error=repr(_life_err))
+                scheduler_task = None
             try:
                 yield
             finally:
                 if scheduler_task is not None:
                     stop_scheduler()
                     scheduler_task.cancel()
-            logger.info("application_stopped", app_name=resolved_settings.app_name)
 
         docs_url = "/docs" if resolved_settings.docs_enabled else None
         redoc_url = "/redoc" if resolved_settings.docs_enabled else None

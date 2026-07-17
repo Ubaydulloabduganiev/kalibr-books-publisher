@@ -57,15 +57,23 @@ async def scheduler_loop() -> None:
 
 
 def start_scheduler() -> asyncio.Task | None:
-    """Start the scheduler as a background task if not already running."""
+    """Start the scheduler as a background task on the running event loop.
+
+    Must be called from within the running asyncio event loop (the lifespan),
+    so we use ``asyncio.get_running_loop()``. Falls back gracefully if no loop
+    is running so startup can never crash on this call.
+    """
     try:
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
     except RuntimeError:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
+        # No running loop (e.g. called outside the event loop) — skip scheduling.
+        logger.warning("scheduler_no_running_loop")
+        return None
     if _running:
         return None
-    return loop.create_task(scheduler_loop())
+    task = loop.create_task(scheduler_loop())
+    logger.info("scheduler_task_created")
+    return task
 
 
 def stop_scheduler() -> None:
