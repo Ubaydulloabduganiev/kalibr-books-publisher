@@ -57,6 +57,22 @@ async def list_content_plans() -> ContentPlanList:
     )
 
 
+@router.get("/{plan_id}", response_model=ContentPlanOut)
+async def get_content_plan(plan_id: str) -> ContentPlanOut:
+    record = cp.get_plan(plan_id)
+    if record is None:
+        raise ApiError(
+            status_code=404, code="plan_not_found",
+            message="The requested content plan does not exist.",
+            recovery_suggestion="Refresh the list and try again.",
+        )
+    return ContentPlanOut(
+        id=record.id, filename=record.filename, created_at=record.created_at,
+        post_count=sum(1 for i in record.items if i.post_id),
+        items=[ContentPlanItemOut(**asdict(i)) for i in record.items],
+    )
+
+
 @router.post("/upload", response_model=ContentPlanOut, status_code=201)
 async def upload_content_plan(file: UploadFile = File(...)) -> ContentPlanOut:
     raw = await file.read()

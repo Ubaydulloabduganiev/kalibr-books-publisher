@@ -141,6 +141,11 @@
     "plansEmpty": "Hali reja yuklanmagan",
     "deletePlan": "O‘chirish",
     "posts": "Postlar",
-    "created": "Yaratildi"
+    "created": "Yaratildi",
+    "back": "Orqaga",
+    "originalText": "Asl matn",
+    "caption": "Sarlavha",
+    "post": "Post",
+    "noCaption": "Hali yo'q"
   }
 }

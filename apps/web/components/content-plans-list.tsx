@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -26,7 +27,7 @@ function formatDate(iso: string): string {
   }
 }
 
-export function ContentPlansList({ messages }: { messages: Messages }) {
+export function ContentPlansList({ messages, locale }: { messages: Messages; locale: string }) {
   const t = messages.contentPlan;
   const [plans, setPlans] = useState<ContentPlan[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -75,36 +76,42 @@ export function ContentPlansList({ messages }: { messages: Messages }) {
         )}
         {plans.map((plan) => (
           <div key={plan.id} className="rounded border p-3">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="font-medium">{plan.filename}</p>
-                <p className="text-xs text-muted-foreground">
-                  {t.created}: {formatDate(plan.created_at)} · {t.posts}: {plan.post_count}
-                </p>
+            <Link href={`/${locale}/content-plan/${plan.id}`} className="block">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="font-medium">{plan.filename}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {t.created}: {formatDate(plan.created_at)} · {t.posts}: {plan.post_count}
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  disabled={busyId === plan.id}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleDelete(plan);
+                  }}
+                >
+                  <Trash2 className="size-4" aria-hidden="true" />
+                  {t.deletePlan}
+                </Button>
               </div>
-              <Button
-                size="sm"
-                variant="destructive"
-                disabled={busyId === plan.id}
-                onClick={() => handleDelete(plan)}
-              >
-                <Trash2 className="size-4" aria-hidden="true" />
-                {t.deletePlan}
-              </Button>
-            </div>
-            {plan.items.length > 0 && (
-              <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
-                {plan.items.slice(0, 5).map((item) => (
-                  <li key={item.row}>
-                    {item.row + 1}. {item.text.slice(0, 60)}
-                    {item.text.length > 60 ? "…" : ""}
-                  </li>
-                ))}
-                {plan.items.length > 5 && (
-                  <li>… +{plan.items.length - 5} more</li>
-                )}
-              </ul>
-            )}
+              {plan.items.length > 0 && (
+                <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
+                  {plan.items.slice(0, 5).map((item) => (
+                    <li key={item.row}>
+                      {item.row + 1}. {item.text.slice(0, 60)}
+                      {item.text.length > 60 ? "…" : ""}
+                    </li>
+                  ))}
+                  {plan.items.length > 5 && (
+                    <li>… +{plan.items.length - 5} more</li>
+                  )}
+                </ul>
+              )}
+            </Link>
           </div>
         ))}
       </CardContent>

@@ -141,6 +141,11 @@
     "plansEmpty": "Планы ещё не загружены",
     "deletePlan": "Удалить",
     "posts": "Посты",
-    "created": "Создан"
+    "created": "Создан",
+    "back": "Назад",
+    "originalText": "Исходный текст",
+    "caption": "Подпись",
+    "post": "Пост",
+    "noCaption": "Пока нет"
   }
 }

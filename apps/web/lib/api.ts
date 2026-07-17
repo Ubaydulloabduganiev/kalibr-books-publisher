@@ -449,6 +449,25 @@ export async function listContentPlans(): Promise<{ ok: boolean; data?: ContentP
   }
 }
 
+export async function getContentPlan(
+  id: string,
+): Promise<{ ok: boolean; data?: ContentPlan; error?: string }> {
+  try {
+    const response = await fetch(`${apiBaseUrl}/api/v1/content-plan/${encodeURIComponent(id)}`, {
+      method: "GET",
+      cache: "no-store",
+      headers: { Accept: "application/json" },
+    });
+    if (!response.ok) {
+      return { ok: false, error: await readApiError(response, "Failed to load plan") };
+    }
+    const data = (await response.json()) as ContentPlan;
+    return { ok: true, data };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "Unknown API error" };
+  }
+}
+
 export async function deleteContentPlan(id: string): Promise<{ ok: boolean; error?: string }> {
   try {
     const response = await fetch(`${apiBaseUrl}/api/v1/content-plan/${encodeURIComponent(id)}`, {
