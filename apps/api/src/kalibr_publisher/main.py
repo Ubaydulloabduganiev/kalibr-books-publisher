@@ -84,7 +84,7 @@ try:
         return application
 
     app = create_app()
-except Exception as _boot_err:  # pragma: no cover - defensive boot guard
+except BaseException as _boot_err:  # pragma: no cover - defensive boot guard
     import traceback
 
     _tb = traceback.format_exc()
