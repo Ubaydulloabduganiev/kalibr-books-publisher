@@ -1,1 +1,0 @@
-"""Kalibr Publisher api package."""
